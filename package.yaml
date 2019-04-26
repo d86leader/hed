@@ -1,0 +1,38 @@
+name:                hed
+version:             0.1.0.0
+github:              "d86leader/hed"
+license:             GPL-3
+author:              "d86leader"
+maintainer:          "d86leader@mail.com"
+copyright:           "GitHub implicit copyright 2018"
+copyright:           "distributed under under GNU GPLv3"
+
+extra-source-files:
+- README.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         An ed-like editor written in haskell. See README.md at github.com/d86leader/hym for details.
+
+dependencies:
+- base >= 4.7 && < 5
+- text
+
+library:
+  source-dirs: src
+
+executables:
+  hed-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - hed
