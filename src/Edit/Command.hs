@@ -1,5 +1,5 @@
 {-# LANGUAGE GADTSyntax #-}
-module Command where -- export all datatypes
+module Edit.Command where -- export all datatypes
 
 -- |Commands that are parsed from keyboard input or command file
 
