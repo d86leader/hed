@@ -7,15 +7,28 @@ module Edit.Effects
               --  functions
 , writer, tell, listen, pass -- |Monad writer methods
 , runEffects
+
+, Cursor(..)
+, newCursor
 ) where
 
-import Data.Text.Lazy (Text)
+import Data.Text (Text)
 import Control.Monad.Writer.Lazy (writer, tell, listen, pass)
+import Data.Map.Strict (Map)
+import Data.Vector (Vector)
+
+
+-- |Left and right bounds of a cursor on a single line
+data Cursor = Cursor Int Int
+    deriving (Show)
+newCursor = Cursor 0 0
+
 
 -- |A buffer that is modified by commands
 data Buffer = Buffer {
-     text :: Text
+     body :: Vector Text
     ,filename :: FilePath
+    ,cursors :: Map Int Cursor
     -- TODO: undo history, redo history
 } deriving (Show)
 
