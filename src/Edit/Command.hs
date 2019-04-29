@@ -14,8 +14,8 @@ data CharacterMovement where
     ToEnd       :: CharacterMovement
 
 data LinewiseMovement where
-    AbsoluteNumber :: Integer -> LinewiseMovement
-    RelativeNumber :: Integer -> LinewiseMovement
+    AbsoluteNumber :: Int -> LinewiseMovement
+    RelativeNumber :: Int -> LinewiseMovement
     -- TODO: all matching regex
 
 
