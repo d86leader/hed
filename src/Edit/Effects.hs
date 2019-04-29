@@ -1,6 +1,10 @@
 {-# LANGUAGE GADTSyntax #-}
 module Edit.Effects
 ( Buffer(..)  -- |State of editing a text file
+, editBody
+, editFileName
+, editCursors
+
 , Effects(..) -- |Side effects when editing a file
 , EffectAtom  -- |A monad writer that tracks side effects of editing
 , EditAtom    -- |Effect atom with buffer embedded. Main return type of edit
@@ -31,6 +35,16 @@ data Buffer = Buffer {
     ,cursors :: Map Int Cursor
     -- TODO: undo history, redo history
 } deriving (Show)
+-- Quickly modify buffer content
+editBody :: (Vector Text -> Vector Text) -> Buffer -> Buffer
+editBody f buf = let text = body buf
+                 in buf {body = f text}
+editFileName :: (FilePath -> FilePath) -> Buffer -> Buffer
+editFileName f buf = let path = filename buf
+                 in buf {filename = f path}
+editCursors :: (Map Int Cursor -> Map Int Cursor) -> Buffer -> Buffer
+editCursors f buf = let cur = cursors buf
+                    in buf {cursors = f cur}
 
 -- |Side effects that can occur when execting commands
 data Effects where
