@@ -4,14 +4,17 @@ module Edit.Execute
 
 
 import Data.Map.Strict (Map, member, insert, union, delete, keysSet, keys)
+import Data.Text (append, snoc)
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
 import qualified Data.Vector as Vector
 import qualified Edit.Command as Command
 import Edit.Command (Command(..), LinewiseMovement(..), CharacterMovement(..)
                     ,VSide(..), HSide(..))
 import Edit.Effects (Buffer(..), Effects(..), EditAtom, newCursor
-                    ,editBody, editFileName, editCursors)
+                    ,editBody, editFileName, editCursors
+                    ,writer)
 
 
 -- |Execute editor commands to modify a buffer
@@ -21,6 +24,9 @@ runCommand (AddLineSelection movement) = addLineSelection movement
 runCommand (RemoveLineSelection movement) = removeLineSelection movement
 
 runCommand DeleteLines = deleteLines
+
+runCommand PrintBufferBody = printBufferBody
+runCommand WriteBuffer = writeBuffer
 
 
 --- Line selection commands ---
@@ -59,3 +65,15 @@ deleteLines Buffer{body = lines , cursors = cur, filename = fname} =
         dropped = dropAll lines
         resetCursor = Map.fromAscList [(1, newCursor)]
     in return Buffer{body = dropped, cursors = resetCursor, filename = fname}
+
+
+-- Side-effectful commands
+
+printBufferBody :: Buffer -> EditAtom
+printBufferBody buf =
+    let text = foldr joinLines Text.empty $ body buf
+    in writer (buf, [ConsoleLog text])
+    where left `joinLines` right = left `snoc` '\n' `append` right
+
+writeBuffer :: Buffer -> EditAtom
+writeBuffer buf = writer (buf, [WriteFile buf])
