@@ -47,7 +47,7 @@ parseCommand rep ('K':rest) = (AddLineSelection (RelativeNumber $ negate rep)) :
 parseCommand _ ('d':rest) = DeleteLines : parseString rest
 
 -- output
-parseCommand rep str@(':'rest) = parseLongCommand rep str
+parseCommand rep str@(':':rest) = parseLongCommand rep str
 
 
 ---
@@ -57,8 +57,8 @@ parseCommand rep str@(':'rest) = parseLongCommand rep str
 -- This may require a more complex parser in the future
 parseLongCommand :: Int -> String -> [Command]
 
-parseLongCommand _ ('p':'r':'i':'n':'t':'':rest) = PrintBufferBody : parseString rest
-parseLongCommand _ ('w':'':rest) = WriteBuffer : parseString rest
-parseLongCommand _ ('q':'':rest) = [] -- stop parsing
+parseLongCommand _ ('p':'r':'i':'n':'t':'\n':rest) = PrintBufferBody : parseString rest
+parseLongCommand _ ('w':'\n':rest) = WriteBuffer : parseString rest
+parseLongCommand _ ('q':'\n':rest) = [] -- stop parsing
 parseLongCommand _ (_:rest) = BadCommand "Multichar commands are wip, please use them carefully"
                               : parseString rest
