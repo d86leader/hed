@@ -43,4 +43,7 @@ data Command where
     Undo :: Command
     Redo :: Command
     --
+    PrintBufferBody :: Command
+    WriteBuffer :: Command
+    --
     BadCommand :: String -> Command -- contains error message

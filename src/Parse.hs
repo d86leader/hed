@@ -16,6 +16,9 @@ parseString str@(char:_)
 parseString "" = []
 
 
+---
+
+
 parseRepeat :: Int -> String -> [Command]
 parseRepeat _ "" = [BadCommand "Trying to find repeat on empty input"]
 parseRepeat x str@(char:rest)
@@ -23,6 +26,9 @@ parseRepeat x str@(char:rest)
                           x' = x*10 + digit
                       in parseRepeat x' rest
     | otherwise     = parseCommand x str
+
+
+---
 
 
 parseCommand :: Int -> String -> [Command]
@@ -39,3 +45,20 @@ parseCommand rep ('K':rest) = (AddLineSelection (RelativeNumber $ negate rep)) :
 
 -- delete lines selected
 parseCommand _ ('d':rest) = DeleteLines : parseString rest
+
+-- output
+parseCommand rep str@(':'rest) = parseLongCommand rep str
+
+
+---
+
+
+-- |Some commands can be many symbols. They shall start with colon and end with <CR>
+-- This may require a more complex parser in the future
+parseLongCommand :: Int -> String -> [Command]
+
+parseLongCommand _ ('p':'r':'i':'n':'t':'':rest) = PrintBufferBody : parseString rest
+parseLongCommand _ ('w':'':rest) = WriteBuffer : parseString rest
+parseLongCommand _ ('q':'':rest) = [] -- stop parsing
+parseLongCommand _ (_:rest) = BadCommand "Multichar commands are wip, please use them carefully"
+                              : parseString rest
