@@ -22,11 +22,11 @@ data LinewiseMovement where
 data Command where
     AddLineSelection    :: LinewiseMovement -> Command
     RemoveLineSelection :: LinewiseMovement -> Command
-    ResetLineSelection  :: LinewiseMovement -> Command
+    ResetLineSelection  :: LinewiseMovement -> Command -- what does this do?
     --
     AddCharacterSelection    :: CharacterMovement -> Command
     RemoveCharacterSelection :: CharacterMovement -> Command
-    ResetCharaterSelection   :: CharacterMovement -> Command
+    ResetCharaterSelection   :: CharacterMovement -> Command -- what does this do?
     --
     DeleteLines :: Command
     ChangeLines :: Command
