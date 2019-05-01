@@ -6,7 +6,7 @@ module Edit.Execute
 
 import Control.Monad ((>=>))
 import Data.Map.Strict (Map, member, insert, union, delete, keysSet, keys)
-import Data.Text (append, snoc)
+import Data.Text (append, snoc, pack)
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
@@ -28,7 +28,7 @@ runOneCommand DeleteLines = deleteLines
 
 runOneCommand PrintBufferBody = printBufferBody
 runOneCommand WriteBuffer = writeBuffer
-
+runOneCommand (BadCommand errmsg) = badCommand errmsg
 
 -- |Execute a line of commands monadically
 runCommands :: [Command] -> Buffer -> EditAtom
@@ -83,3 +83,6 @@ printBufferBody buf =
 
 writeBuffer :: Buffer -> EditAtom
 writeBuffer buf = writer (buf, [WriteFile buf])
+
+badCommand :: String -> Buffer -> EditAtom
+badCommand errmsg buf = writer (buf, [ConsoleLog . pack $ errmsg])
