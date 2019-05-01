@@ -1,8 +1,10 @@
 module Edit.Execute
-(
+( runOneCommand
+, runCommands
 ) where
 
 
+import Control.Monad ((>=>))
 import Data.Map.Strict (Map, member, insert, union, delete, keysSet, keys)
 import Data.Text (append, snoc)
 import qualified Data.Set as Set
@@ -18,15 +20,19 @@ import Edit.Effects (Buffer(..), Effects(..), EditAtom, newCursor
 
 
 -- |Execute editor commands to modify a buffer
+runOneCommand :: Command -> Buffer -> EditAtom
+runOneCommand (AddLineSelection movement) = addLineSelection movement
+runOneCommand (RemoveLineSelection movement) = removeLineSelection movement
 
-runCommand :: Command -> Buffer -> EditAtom
-runCommand (AddLineSelection movement) = addLineSelection movement
-runCommand (RemoveLineSelection movement) = removeLineSelection movement
+runOneCommand DeleteLines = deleteLines
 
-runCommand DeleteLines = deleteLines
+runOneCommand PrintBufferBody = printBufferBody
+runOneCommand WriteBuffer = writeBuffer
 
-runCommand PrintBufferBody = printBufferBody
-runCommand WriteBuffer = writeBuffer
+
+-- |Execute a line of commands monadically
+runCommands :: [Command] -> Buffer -> EditAtom
+runCommands = foldr (>=>) return . map runOneCommand
 
 
 --- Line selection commands ---
