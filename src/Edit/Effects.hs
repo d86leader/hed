@@ -58,4 +58,4 @@ type EffectAtom a = ([Effects], a)
 type EditAtom = EffectAtom Buffer
 
 runEffects :: EffectAtom a -> (a, [Effects])
-runEffects (x, w) = (w, x)
+runEffects (w, x) = (x, w)
