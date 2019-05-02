@@ -50,6 +50,7 @@ parseCommand _ ('d':rest) = DeleteLines : parseString rest
 parseCommand rep (':':rest) = parseLongCommand rep rest
 
 -- no command
+parseCommand _ ('\n':rest) = parseString rest
 parseCommand _ str = [BadCommand $ "Can't parse command in line " ++ str]
 
 
