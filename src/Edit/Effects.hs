@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTSyntax #-}
+{-# LANGUAGE GADTSyntax, DeriveFunctor #-}
 module Edit.Effects
 ( Buffer(..)  -- |State of editing a text file
 , editBody
@@ -9,7 +9,7 @@ module Edit.Effects
 , EffectAtom  -- |A monad writer that tracks side effects of editing
 , EditAtom    -- |Effect atom with buffer embedded. Main return type of edit
               --  functions
-, writer, tell, listen, pass -- |Monad writer methods
+, writer, listen, pass -- |Monad writer methods
 , runEffects
 
 , Cursor(..)
@@ -17,7 +17,6 @@ module Edit.Effects
 ) where
 
 import Data.Text (Text)
-import Control.Monad.Writer.Lazy (writer, tell, listen, pass)
 import Data.Map.Strict (Map)
 import Data.Vector (Vector)
 
@@ -54,8 +53,27 @@ data Effects where
     --
     deriving (Show)
 
-type EffectAtom a = ([Effects], a)
+data EffectAtom a = EffectAtom [Effects] a
+    deriving (Functor)
 type EditAtom = EffectAtom Buffer
 
 runEffects :: EffectAtom a -> (a, [Effects])
-runEffects (w, x) = (x, w)
+runEffects (EffectAtom w x) = (x, w)
+
+-- the library implementation of monad writer is not rhs-lazy in the monoid, so
+-- we implement all methods ourself
+instance Applicative EffectAtom where
+    pure x = EffectAtom [] x
+    (EffectAtom w1 f) <*> (EffectAtom w2 x) = EffectAtom (w1 ++ w2) (f x)
+instance Monad EffectAtom where
+    return = pure
+    (EffectAtom w1 x) >>= f =
+        let EffectAtom w2 y = f x
+        in EffectAtom (w1 ++ w2) y
+-- and lets declare the writer methods without the class itself
+writer :: (a, [Effects]) -> EffectAtom a
+writer (x, w) = EffectAtom w x
+listen :: EffectAtom a -> EffectAtom (a, [Effects])
+listen (EffectAtom w x) = EffectAtom w (x, w)
+pass :: EffectAtom (a, [Effects] -> [Effects]) -> EffectAtom a
+pass (EffectAtom w (x, f)) = EffectAtom (f w) x
