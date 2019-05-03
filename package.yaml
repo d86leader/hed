@@ -4,7 +4,6 @@ github:              "d86leader/hed"
 license:             GPL-3
 author:              "d86leader"
 maintainer:          "d86leader@mail.com"
-copyright:           "GitHub implicit copyright 2018"
 copyright:           "distributed under under GNU GPLv3"
 
 extra-source-files:
