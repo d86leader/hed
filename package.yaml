@@ -24,6 +24,7 @@ dependencies:
 - mtl
 - containers
 - vector
+- ansi-terminal
 
 library:
   source-dirs: src

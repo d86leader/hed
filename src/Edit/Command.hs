@@ -1,5 +1,5 @@
 {-# LANGUAGE GADTSyntax #-}
-module Edit.Command where -- export all datatypes
+module Edit.Command where -- FIXME export by names, there aren't as much as i first thought
 
 -- |Commands that are parsed from keyboard input or command file
 

@@ -22,7 +22,9 @@ import Data.Vector (Vector)
 import Control.Monad.Writer.Lazy (Writer, writer, listen, pass, runWriter)
 
 
--- |Left and right bounds of a cursor on a single line
+-- |Left and right bounds of a cursor on a single line.
+-- Inclusive, which means that if you delete selected (Cursor l r) text it will
+-- delete character at l and character at r.
 data Cursor = Cursor Int Int
     deriving (Show)
 newCursor = Cursor 0 0
@@ -50,6 +52,7 @@ editCursors f buf = let cur = cursors buf
 data Effects where
     ConsoleLog :: Text -> Effects
     WriteFile :: Buffer -> Effects
+    PrintBuffer :: Buffer -> Effects
     -- something else?
     --
     deriving (Show)

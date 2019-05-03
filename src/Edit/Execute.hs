@@ -6,7 +6,7 @@ module Edit.Execute
 
 import Control.Monad ((>=>))
 import Data.Map.Strict (Map, member, insert, union, delete, keysSet, keys)
-import Data.Text (append, snoc, pack)
+import Data.Text (pack)
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
@@ -76,10 +76,7 @@ deleteLines Buffer{body = lines , cursors = cur, filename = fname} =
 -- Side-effectful commands
 
 printBufferBody :: Buffer -> EditAtom
-printBufferBody buf =
-    let text = foldr joinLines Text.empty $ body buf
-    in writer (buf, [ConsoleLog text])
-    where left `joinLines` right = left `snoc` '\n' `append` right
+printBufferBody buf = writer (buf, [PrintBuffer buf])
 
 writeBuffer :: Buffer -> EditAtom
 writeBuffer buf = writer (buf, [WriteFile buf])
