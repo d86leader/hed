@@ -19,6 +19,7 @@ module Edit.Effects
 import Data.Text (Text)
 import Data.Map.Strict (Map)
 import Data.Vector (Vector)
+import Control.Monad.Writer.Lazy (Writer, writer, listen, pass, runWriter)
 
 
 -- |Left and right bounds of a cursor on a single line
@@ -53,27 +54,8 @@ data Effects where
     --
     deriving (Show)
 
-data EffectAtom a = EffectAtom [Effects] a
-    deriving (Functor)
+type EffectAtom a = Writer [Effects] a
 type EditAtom = EffectAtom Buffer
 
 runEffects :: EffectAtom a -> (a, [Effects])
-runEffects (EffectAtom w x) = (x, w)
-
--- the library implementation of monad writer is not rhs-lazy in the monoid, so
--- we implement all methods ourself
-instance Applicative EffectAtom where
-    pure x = EffectAtom [] x
-    (EffectAtom w1 f) <*> (EffectAtom w2 x) = EffectAtom (w1 ++ w2) (f x)
-instance Monad EffectAtom where
-    return = pure
-    (EffectAtom w1 x) >>= f =
-        let EffectAtom w2 y = f x
-        in EffectAtom (w1 ++ w2) y
--- and lets declare the writer methods without the class itself
-writer :: (a, [Effects]) -> EffectAtom a
-writer (x, w) = EffectAtom w x
-listen :: EffectAtom a -> EffectAtom (a, [Effects])
-listen (EffectAtom w x) = EffectAtom w (x, w)
-pass :: EffectAtom (a, [Effects] -> [Effects]) -> EffectAtom a
-pass (EffectAtom w (x, f)) = EffectAtom (f w) x
+runEffects = runWriter
