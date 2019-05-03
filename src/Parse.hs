@@ -47,6 +47,7 @@ parseCommand rep ('K':rest) = (AddLineSelection (RelativeNumber $ negate rep)) :
 parseCommand _ ('d':rest) = DeleteLines : parseString rest
 
 -- output
+parseCommand _ ('p':rest) = PrintBufferBody : parseString rest
 parseCommand rep (':':rest) = parseLongCommand rep rest
 
 -- no command
