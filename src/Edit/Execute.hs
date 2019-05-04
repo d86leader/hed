@@ -75,3 +75,6 @@ writeBuffer buf = writer (buf, [WriteFile buf])
 
 badCommand :: String -> Buffer -> EditAtom
 badCommand errmsg buf = writer (buf, [ConsoleLog . pack $ errmsg])
+
+consoleLog :: String -> EffectAtom ()
+consoleLog x = tell [ConsoleLog $ pack x]
