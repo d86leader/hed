@@ -26,6 +26,8 @@ runOneCommand (RemoveLineSelection movement) = removeLineSelection movement
 runOneCommand (MoveLineSelection movement) = moveLineSelection movement
 runOneCommand ResetLineSelection = resetLineSelection
 
+runOneCommand (InsertLines side text) = insertLines side text
+
 runOneCommand PrintBufferBody = printBufferBody
 runOneCommand WriteBuffer = writeBuffer
 runOneCommand (BadCommand errmsg) = badCommand errmsg
@@ -74,6 +76,9 @@ resetLineSelection = return . editCursors (const newAllCursors)
 
 --- Line editing commands ---
 
+
+insertLines :: VSide -> Text -> Buffer -> EditAtom
+insertLines = undefined
 
 
 -- Side-effectful commands

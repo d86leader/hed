@@ -5,6 +5,10 @@ module Edit.Command
 , Command(..)
 ) where
 
+
+import Data.Text (Text)
+
+
 -- |Commands that are parsed from keyboard input or command file
 
 data HSide = Left | Right
@@ -37,7 +41,7 @@ data Command where
     ChangeLines :: Command
     YankLines   :: Command
     PutLines    :: VSide -> Command
-    InsertLines :: VSide -> Command
+    InsertLines :: VSide -> Text -> Command
     --
     DeleteText :: Command
     ChangeText :: Command

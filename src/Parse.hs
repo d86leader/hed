@@ -51,6 +51,12 @@ parseCommand rep ('j':rest) = (MoveLineSelection (RelativeNumber rep)) : parseSt
 parseCommand 0 ('k':rest)   = (MoveLineSelection (RelativeNumber $ negate 1))   : parseString rest
 parseCommand rep ('k':rest) = (MoveLineSelection (RelativeNumber $ negate rep)) : parseString rest
 
+-- insert new lines
+parseCommand 0 ('o':rest)   = parseInsert 1 Bottom rest
+parseCommand rep ('o':rest) = parseInsert rep Bottom rest
+parseCommand 0 ('O':rest)   = parseInsert 1 Top rest
+parseCommand rep ('O':rest) = parseInsert rep Top rest
+
 -- delete lines selected
 parseCommand _ ('d':rest) = DeleteLines : parseString rest
 
@@ -75,3 +81,17 @@ parseLongCommand _ ('w':'\n':rest) = WriteBuffer : parseString rest
 parseLongCommand _ ('q':'\n':rest) = [] -- stop parsing
 parseLongCommand _ (_:rest) = BadCommand "Multichar commands are wip, please use them carefully"
                               : parseString rest
+
+
+---
+
+
+-- |Some commands require entering a line. This is like vim's insert mode, but the end with <CR>
+parseInsert :: Int -> VSide -> String -> [Command]
+parseInsert rep side text =
+    let (insert', rest') = break (== '\n') text
+        insert = replicate rep $ pack insert'
+        command = InsertLines side insert
+    in case rest' of
+        "" -> [command]
+        '\n':rest -> [command] : parseString rest
