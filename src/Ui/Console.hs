@@ -17,7 +17,8 @@ import qualified Data.Map as Map
 
 import Parse (parseString)
 import Edit.Execute (runCommands)
-import Edit.Effects (Buffer(..), Effects(..), Cursor(..), newCursor, runEffects)
+import Edit.Effects (Buffer(..), Effects(..), Cursor(..)
+                    ,newCursor, newAllCursors, runEffects)
 
 
 -- |Get user input from command line, parse it, execute it in free context, and
@@ -27,7 +28,7 @@ runUi = do
     input <- getContents
     let buffer = Buffer{body = fromList ["foobar", "barbaz", "keklol", "gotcha"]
                        ,filename = "None"
-                       ,cursors = Map.fromAscList [(1, newCursor)]
+                       ,cursors = newAllCursors
                        }
     let commands = parseString input
     let executed = runCommands commands buffer

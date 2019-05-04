@@ -13,11 +13,11 @@ module Edit.Effects
 , runEffects
 
 , Cursor(..)
-, newCursor
+, newCursor, newAllCursors
 ) where
 
 import Data.Text (Text)
-import Data.Map.Strict (Map)
+import Data.Map.Strict (Map, fromAscList)
 import Data.Vector (Vector)
 import Control.Monad.Writer.Lazy (Writer, writer, tell, listen, pass
                                  ,runWriter)
@@ -28,7 +28,10 @@ import Control.Monad.Writer.Lazy (Writer, writer, tell, listen, pass
 -- delete character at l and character at r.
 data Cursor = Cursor Int Int
     deriving (Show)
+newCursor :: Cursor
 newCursor = Cursor 0 0
+newAllCursors :: Map Int Cursor
+newAllCursors = fromAscList [(1, newCursor)]
 
 
 -- |A buffer that is modified by commands

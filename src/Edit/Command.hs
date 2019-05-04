@@ -26,7 +26,8 @@ data LinewiseMovement where
 data Command where
     AddLineSelection    :: LinewiseMovement -> Command
     RemoveLineSelection :: LinewiseMovement -> Command -- what's the syntax for this?
-    ResetLineSelection  :: LinewiseMovement -> Command -- what does this do?
+    ResetLineSelection  :: Command
+    MoveLineSelection :: LinewiseMovement -> Command
     --
     AddCharacterSelection    :: CharacterMovement -> Command
     RemoveCharacterSelection :: CharacterMovement -> Command

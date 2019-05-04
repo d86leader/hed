@@ -42,6 +42,14 @@ parseCommand 0 ('J':rest)   = (AddLineSelection (RelativeNumber 1))   : parseStr
 parseCommand rep ('J':rest) = (AddLineSelection (RelativeNumber rep)) : parseString rest
 parseCommand 0 ('K':rest)   = (AddLineSelection (RelativeNumber $ negate 1))   : parseString rest
 parseCommand rep ('K':rest) = (AddLineSelection (RelativeNumber $ negate rep)) : parseString rest
+-- reset line selection
+parseCommand _ ('g':'g':rest) = ResetLineSelection : parseString rest
+
+-- move line selection
+parseCommand 0 ('j':rest)   = (MoveLineSelection (RelativeNumber 1))   : parseString rest
+parseCommand rep ('j':rest) = (MoveLineSelection (RelativeNumber rep)) : parseString rest
+parseCommand 0 ('k':rest)   = (MoveLineSelection (RelativeNumber $ negate 1))   : parseString rest
+parseCommand rep ('k':rest) = (MoveLineSelection (RelativeNumber $ negate rep)) : parseString rest
 
 -- delete lines selected
 parseCommand _ ('d':rest) = DeleteLines : parseString rest

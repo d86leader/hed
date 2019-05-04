@@ -13,7 +13,8 @@ import qualified Data.Text as Text
 import qualified Data.Vector as Vector
 import Edit.Command (Command(..), LinewiseMovement(..), CharacterMovement(..)
                     ,VSide(..), HSide(..))
-import Edit.Effects (Buffer(..), Effects(..), EditAtom, EffectAtom, newCursor
+import Edit.Effects (Buffer(..), Effects(..), EditAtom, EffectAtom
+                    ,newCursor, newAllCursors
                     ,editBody, editFileName, editCursors
                     ,writer, tell)
 
@@ -22,8 +23,8 @@ import Edit.Effects (Buffer(..), Effects(..), EditAtom, EffectAtom, newCursor
 runOneCommand :: Command -> Buffer -> EditAtom
 runOneCommand (AddLineSelection movement) = addLineSelection movement
 runOneCommand (RemoveLineSelection movement) = removeLineSelection movement
-
-runOneCommand DeleteLines = deleteLines
+runOneCommand (MoveLineSelection movement) = moveLineSelection movement
+runOneCommand ResetLineSelection = resetLineSelection
 
 runOneCommand PrintBufferBody = printBufferBody
 runOneCommand WriteBuffer = writeBuffer
@@ -59,6 +60,16 @@ removeLineSelection (RelativeNumber offset) =
     where deleteLines offset cur =
             let toDel = Set.map (+ offset) $ keysSet cur
             in Map.withoutKeys cur toDel
+
+moveLineSelection :: LinewiseMovement -> Buffer -> EditAtom
+moveLineSelection (RelativeNumber offset) =
+    return . editCursors (Map.mapKeys (+ offset))
+moveLineSelection (AbsoluteNumber _) = \ buf ->
+    consoleLog "Can't move selection in absolute nmbers"
+    >> return buf
+
+resetLineSelection :: Buffer -> EditAtom
+resetLineSelection = return . editCursors (const newAllCursors)
 
 
 --- Line editing commands ---
