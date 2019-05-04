@@ -9,7 +9,7 @@ module Edit.Effects
 , EffectAtom  -- |A monad writer that tracks side effects of editing
 , EditAtom    -- |Effect atom with buffer embedded. Main return type of edit
               --  functions
-, writer, listen, pass -- |Monad writer methods
+, writer, tell, listen, pass -- |Monad writer methods
 , runEffects
 
 , Cursor(..)
@@ -19,7 +19,8 @@ module Edit.Effects
 import Data.Text (Text)
 import Data.Map.Strict (Map)
 import Data.Vector (Vector)
-import Control.Monad.Writer.Lazy (Writer, writer, listen, pass, runWriter)
+import Control.Monad.Writer.Lazy (Writer, writer, tell, listen, pass
+                                 ,runWriter)
 
 
 -- |Left and right bounds of a cursor on a single line.

@@ -13,9 +13,9 @@ import qualified Data.Text as Text
 import qualified Data.Vector as Vector
 import Edit.Command (Command(..), LinewiseMovement(..), CharacterMovement(..)
                     ,VSide(..), HSide(..))
-import Edit.Effects (Buffer(..), Effects(..), EditAtom, newCursor
+import Edit.Effects (Buffer(..), Effects(..), EditAtom, EffectAtom, newCursor
                     ,editBody, editFileName, editCursors
-                    ,writer)
+                    ,writer, tell)
 
 
 -- |Execute editor commands to modify a buffer
@@ -63,13 +63,6 @@ removeLineSelection (RelativeNumber offset) =
 
 --- Line editing commands ---
 
-deleteLines :: Buffer -> EditAtom
-deleteLines Buffer{body = lines , cursors = cur, filename = fname} =
-    let numbers = keys cur -- FIXME sort descending to delete correct lines
-        dropAll = foldr (.) id (map Vector.drop numbers)
-        dropped = dropAll lines
-        resetCursor = Map.fromAscList [(1, newCursor)]
-    in return Buffer{body = dropped, cursors = resetCursor, filename = fname}
 
 
 -- Side-effectful commands
