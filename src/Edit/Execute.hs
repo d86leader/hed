@@ -11,7 +11,6 @@ import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import qualified Data.Vector as Vector
-import qualified Edit.Command as Command
 import Edit.Command (Command(..), LinewiseMovement(..), CharacterMovement(..)
                     ,VSide(..), HSide(..))
 import Edit.Effects (Buffer(..), Effects(..), EditAtom, newCursor

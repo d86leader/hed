@@ -1,5 +1,9 @@
 {-# LANGUAGE GADTSyntax #-}
-module Edit.Command where -- FIXME export by names, there aren't as much as i first thought
+module Edit.Command
+( HSide(..), VSide(..)
+, CharacterMovement(..), LinewiseMovement(..)
+, Command(..)
+) where
 
 -- |Commands that are parsed from keyboard input or command file
 
