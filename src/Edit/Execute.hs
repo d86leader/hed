@@ -6,10 +6,9 @@ module Edit.Execute
 
 import Control.Monad ((>=>))
 import Data.Map.Strict (Map, member, insert, union, delete, keysSet, keys)
-import Data.Text (pack)
+import Data.Text (Text, pack)
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
-import qualified Data.Text as Text
 import qualified Data.Vector as Vector
 import Edit.Command (Command(..), LinewiseMovement(..), CharacterMovement(..)
                     ,VSide(..), HSide(..))

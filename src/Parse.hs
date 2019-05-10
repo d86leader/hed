@@ -5,6 +5,8 @@ module Parse
 
 import Data.Char (isDigit, digitToInt)
 import Edit.Command -- import all datatypes
+import Data.Text (pack)
+import qualified Data.Text as Text
 
 
 -- my commands are regular, so a simple pattern matching will do for parsing
@@ -86,12 +88,12 @@ parseLongCommand _ (_:rest) = BadCommand "Multichar commands are wip, please use
 ---
 
 
--- |Some commands require entering a line. This is like vim's insert mode, but the end with <CR>
+-- |Some commands require entering a line. This is like vim's insert mode, but they end with <CR>
 parseInsert :: Int -> VSide -> String -> [Command]
 parseInsert rep side text =
     let (insert', rest') = break (== '\n') text
-        insert = replicate rep $ pack insert'
+        insert = Text.replicate rep $ pack insert'
         command = InsertLines side insert
     in case rest' of
         "" -> [command]
-        '\n':rest -> [command] : parseString rest
+        '\n':rest -> command : parseString rest
