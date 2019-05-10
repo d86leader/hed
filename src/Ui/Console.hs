@@ -25,9 +25,9 @@ import Edit.Effects (Buffer(..), Effects(..), Cursor(..)
 runUi :: IO ()
 runUi = do
     input <- getContents
-    let buffer = Buffer{body = ["foobar", "barbaz", "keklol", "gotcha"]
-                       ,filename = "None"
-                       ,cursors = newAllCursors
+    let buffer = Buffer{bufferBody = ["foobar", "barbaz", "keklol", "gotcha"]
+                       ,bufferFilename = "None"
+                       ,bufferCursors = newAllCursors
                        }
     let commands = parseString input
     let executed = runCommands commands buffer
@@ -37,7 +37,7 @@ runUi = do
 
 runOneEffect :: Effects -> IO ()
 runOneEffect (ConsoleLog text) = putStrLn . unpack $ text
-runOneEffect (WriteFile buf) = putStrLn $ "(Pretend) file " ++ filename buf ++ " written"
+runOneEffect (WriteFile buf) = putStrLn $ "(Pretend) file " ++ bufferFilename buf ++ " written"
 runOneEffect (PrintBuffer buf) = printBuffer buf
 
 evalEffects :: [Effects] -> IO ()
@@ -48,8 +48,8 @@ evalEffects = mapM_ runOneEffect
 
 printBuffer :: Buffer -> IO ()
 printBuffer buf =
-    let lines = body buf
-        cur   = cursors buf
+    let lines = bufferBody buf
+        cur   = bufferCursors buf
     in Map.toAscList >>> linewiseCursors >>> zipWith splitOnCur lines
        >>> map joinHighlight >>> Text.unlines
        >>> Text.IO.putStrLn

@@ -35,21 +35,21 @@ newAllCursors = fromAscList [(1, newCursor)]
 
 -- |A buffer that is modified by commands
 data Buffer = Buffer {
-     body :: [Text]
-    ,filename :: FilePath
-    ,cursors :: Map Int Cursor
+     bufferBody :: [Text]
+    ,bufferFilename :: FilePath
+    ,bufferCursors :: Map Int Cursor
     -- TODO: undo history, redo history
 } deriving (Show)
 -- Quickly modify buffer content
 editBody :: ([Text] -> [Text]) -> Buffer -> Buffer
-editBody f buf = let text = body buf
-                 in buf {body = f text}
+editBody f buf = let text = bufferBody buf
+                 in buf {bufferBody = f text}
 editFileName :: (FilePath -> FilePath) -> Buffer -> Buffer
-editFileName f buf = let path = filename buf
-                 in buf {filename = f path}
+editFileName f buf = let path = bufferFilename buf
+                 in buf {bufferFilename = f path}
 editCursors :: (Map Int Cursor -> Map Int Cursor) -> Buffer -> Buffer
-editCursors f buf = let cur = cursors buf
-                    in buf {cursors = f cur}
+editCursors f buf = let cur = bufferCursors buf
+                    in buf {bufferCursors = f cur}
 
 -- |Side effects that can occur when execting commands
 data Effects where

@@ -77,11 +77,11 @@ resetLineSelection = return . editCursors (const newAllCursors)
 
 insertLines :: VSide -> Text -> Buffer -> EditAtom
 insertLines side insLine buf =
-    let curLinePos = map fst . Map.toAscList $ cursors buf
-        lines = zip [1, 2 ..] $ body buf
+    let curLinePos = map fst . Map.toAscList $ bufferCursors buf
+        lines = zip [1, 2 ..] $ bufferBody buf
         newBody = deepInsert curLinePos lines
-        newCurs = moveCursors side $ cursors buf
-    in return buf{body = newBody, cursors = newCurs}
+        newCurs = moveCursors side $ bufferCursors buf
+    in return buf{bufferBody = newBody, bufferCursors = newCurs}
     where
         -- given a list of line numbers, and a list of numbered lines, insert
         -- (already bound) insLine to the correct side (already bound)
