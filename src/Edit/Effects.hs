@@ -18,7 +18,6 @@ module Edit.Effects
 
 import Data.Text (Text)
 import Data.Map.Strict (Map, fromAscList)
-import Data.Vector (Vector)
 import Control.Monad.Writer.Lazy (Writer, writer, tell, listen, pass
                                  ,runWriter)
 
@@ -36,13 +35,13 @@ newAllCursors = fromAscList [(1, newCursor)]
 
 -- |A buffer that is modified by commands
 data Buffer = Buffer {
-     body :: Vector Text
+     body :: [Text]
     ,filename :: FilePath
     ,cursors :: Map Int Cursor
     -- TODO: undo history, redo history
 } deriving (Show)
 -- Quickly modify buffer content
-editBody :: (Vector Text -> Vector Text) -> Buffer -> Buffer
+editBody :: ([Text] -> [Text]) -> Buffer -> Buffer
 editBody f buf = let text = body buf
                  in buf {body = f text}
 editFileName :: (FilePath -> FilePath) -> Buffer -> Buffer

@@ -5,7 +5,6 @@ module Ui.Console
 
 
 import Control.Arrow ((>>>))
-import Data.Vector (fromList, toList)
 import Data.Text (Text, append, snoc, pack, unpack)
 import System.Console.ANSI (setSGRCode)
 import System.Console.ANSI.Types (SGR(SetColor), ConsoleLayer(..)
@@ -26,7 +25,7 @@ import Edit.Effects (Buffer(..), Effects(..), Cursor(..)
 runUi :: IO ()
 runUi = do
     input <- getContents
-    let buffer = Buffer{body = fromList ["foobar", "barbaz", "keklol", "gotcha"]
+    let buffer = Buffer{body = ["foobar", "barbaz", "keklol", "gotcha"]
                        ,filename = "None"
                        ,cursors = newAllCursors
                        }
@@ -51,7 +50,7 @@ printBuffer :: Buffer -> IO ()
 printBuffer buf =
     let lines = body buf
         cur   = cursors buf
-    in Map.toAscList >>> linewiseCursors >>> zipWith splitOnCur (toList lines)
+    in Map.toAscList >>> linewiseCursors >>> zipWith splitOnCur lines
        >>> map joinHighlight >>> Text.unlines
        >>> Text.IO.putStrLn
        $ cur

@@ -23,7 +23,6 @@ dependencies:
 - text
 - mtl
 - containers
-- vector
 - ansi-terminal
 
 library:
