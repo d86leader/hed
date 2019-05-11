@@ -77,32 +77,30 @@ resetLineSelection = return . editCursors (const newAllCursors)
 
 insertLines :: VSide -> Text -> Buffer -> EditAtom
 insertLines side insLine buf =
-    let curLinePos = map fst . Map.toAscList $ bufferCursors buf
-        lines = zip [1, 2 ..] $ bufferBody buf
-        newBody = deepInsert curLinePos lines
+    let cursorLines = map fst . Map.toAscList $ bufferCursors buf
+        lines = bufferBody buf
+        insert = insertNew side insLine
+        newBody = changeByIndex insert cursorLines lines
         newCurs = moveCursors side $ bufferCursors buf
     in return buf{bufferBody = newBody, bufferCursors = newCurs}
     where
-        -- given a list of line numbers, and a list of numbered lines, insert
-        -- (already bound) insLine to the correct side (already bound)
-        deepInsert :: [Int] -> [(Int, Text)] -> [Text]
-        deepInsert [] rest = map snd rest
-        -- the variable names are not that good
-        -- curN - currently observed cursor line number
-        -- curNs - other cursor line numbers
-        -- lineN - number of currently observed line
-        -- cline - text of currently observed line
-        -- lines - list of (number, text) of other lines
-        deepInsert (curN:curNs) ((lineN, cline) : lines)
-            | curN == lineN  = insertNew side (insLine, cline) $ deepInsert curNs lines
-            | otherwise      = cline                           : deepInsert (curN:curNs) lines
-        -- a trick for DRY: insertion may top or bottom, and this is how we abstract it
-        insertNew :: VSide -> (Text, Text) -> [Text] -> [Text]
-        insertNew Top (toIns, textLine) rec = toIns : textLine : rec
-        insertNew Bottom (toIns, textLine) rec = textLine : toIns : rec
+        insertNew :: VSide -> Text -> Int -> Text -> [Text]
+        insertNew Top toIns _ present = [toIns, present]
+        insertNew Bottom toIns _ present = [present, toIns]
         --
         moveCursors Bottom = id
         moveCursors Top    = Map.mapKeys (+ 1)
+
+
+changeByIndex :: (Int -> Text -> [Text]) -> [Int] -> [Text] -> [Text]
+changeByIndex f ind lines = change 1 ind lines where
+    change :: Int -> [Int] -> [Text] -> [Text]
+    change _ [] rest = rest
+    change curLineNr (curInd:inds) (cline:lines)
+        | curLineNr == curInd  =
+            (f curInd cline) ++ change (curLineNr + 1) inds lines
+        | otherwise  = cline : change (curLineNr + 1) (curInd:inds) lines
+
 
 
 -- Side-effectful commands
