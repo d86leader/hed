@@ -5,7 +5,7 @@ module Parse
 
 import Data.Char (isDigit, digitToInt)
 import Edit.Command -- import all datatypes
-import Data.Text (pack)
+import Data.Text (Text, pack)
 import qualified Data.Text as Text
 
 
@@ -54,13 +54,20 @@ parseCommand 0 ('k':rest)   = (MoveLineSelection (RelativeNumber $ negate 1))   
 parseCommand rep ('k':rest) = (MoveLineSelection (RelativeNumber $ negate rep)) : parseString rest
 
 -- insert new lines
-parseCommand 0 ('o':rest)   = parseInsert 1 Bottom rest
-parseCommand rep ('o':rest) = parseInsert rep Bottom rest
-parseCommand 0 ('O':rest)   = parseInsert 1 Top rest
-parseCommand rep ('O':rest) = parseInsert rep Top rest
+parseCommand rep ('o':rest) =
+    let (text, rest') = parseInsert rep rest
+    in (InsertLines Bottom text) : parseString rest'
+parseCommand rep ('O':rest) =
+    let (text, rest') = parseInsert rep rest
+    in (InsertLines Top text) : parseString rest'
 
 -- delete lines selected
 parseCommand _ ('d':rest) = DeleteLines : parseString rest
+
+-- change selected lines
+parseCommand rep ('c':rest) =
+    let (text, rest') = parseInsert rep rest
+    in (ChangeLines text) : parseString rest'
 
 -- output
 parseCommand _ ('p':rest) = PrintBufferBody : parseString rest
@@ -89,11 +96,12 @@ parseLongCommand _ (_:rest) = BadCommand "Multichar commands are wip, please use
 
 
 -- |Some commands require entering a line. This is like vim's insert mode, but they end with <CR>
-parseInsert :: Int -> VSide -> String -> [Command]
-parseInsert rep side text =
-    let (insert', rest') = break (== '\n') text
+parseInsert :: Int -> String -> (Text, String)
+parseInsert rep' text =
+    let rep = if rep' == 0 then 1 else rep'
+        (insert', rest') = break (== '\n') text
         insert = Text.replicate rep $ pack insert'
-        command = InsertLines side insert
-    in case rest' of
-        "" -> [command]
-        '\n':rest -> command : parseString rest
+        rest = case rest' of
+                "" -> ""
+                '\n':cs -> cs
+    in (insert, rest)

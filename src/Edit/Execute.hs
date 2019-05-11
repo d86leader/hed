@@ -26,6 +26,7 @@ runOneCommand ResetLineSelection = resetLineSelection
 
 runOneCommand (InsertLines side text) = insertLines side text
 runOneCommand DeleteLines = deleteLines
+runOneCommand (ChangeLines text) = changeLines text
 
 runOneCommand PrintBufferBody = printBufferBody
 runOneCommand WriteBuffer = writeBuffer
@@ -94,6 +95,12 @@ deleteLines :: Buffer -> EditAtom
 deleteLines =
     let delete = \_ _ -> []
     in linewiseChange delete id
+
+
+changeLines :: Text -> Buffer -> EditAtom
+changeLines text =
+    let change = \_ _ -> [text]
+    in linewiseChange change id
 
 
 linewiseChange :: (Int -> Text -> [Text])
