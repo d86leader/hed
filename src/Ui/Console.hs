@@ -28,6 +28,7 @@ runUi = do
     let buffer = Buffer{bufferBody = ["foobar", "barbaz", "keklol", "gotcha"]
                        ,bufferFilename = "None"
                        ,bufferCursors = newAllCursors
+                       ,bufferSize = 4
                        }
     let commands = parseString input
     let executed = runCommands commands buffer

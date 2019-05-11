@@ -11,7 +11,8 @@ import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
 import Edit.Command (Command(..), LinewiseMovement(..), CharacterMovement(..)
                     ,VSide(..), HSide(..))
-import Edit.Effects (Buffer(..), Effects(..), EditAtom, EffectAtom, Cursor
+import Edit.Effects (Buffer(..), Effects(..)
+                    ,EditAtom, EffectAtom, Cursor, Cursors
                     ,newCursor, newAllCursors
                     ,editBody, editFileName, editCursors
                     ,writer, tell)
@@ -104,7 +105,7 @@ changeLines text =
 
 
 linewiseChange :: (Int -> Text -> [Text])
-               -> (Map Int Cursor -> Map Int Cursor)
+               -> (Cursors -> Cursors)
                -> Buffer -> EditAtom
 linewiseChange textEdit cursorEdit buf =
     let cursorLines = map fst . Map.toAscList $ bufferCursors buf

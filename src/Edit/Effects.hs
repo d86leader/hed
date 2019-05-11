@@ -12,7 +12,7 @@ module Edit.Effects
 , writer, tell, listen, pass -- |Monad writer methods
 , runEffects
 
-, Cursor(..)
+, Cursor(..), Cursors
 , newCursor, newAllCursors
 ) where
 
@@ -31,14 +31,17 @@ newCursor :: Cursor
 newCursor = Cursor 0 0
 newAllCursors :: Map Int Cursor
 newAllCursors = fromAscList [(1, newCursor)]
+-- For ease of function types
+type Cursors = Map Int Cursor
 
 
 -- |A buffer that is modified by commands
 data Buffer = Buffer {
      bufferBody :: [Text]
     ,bufferFilename :: FilePath
-    ,bufferCursors :: Map Int Cursor
-    -- TODO: undo history, redo history
+    ,bufferCursors :: Cursors
+    ,bufferSize :: Int -- amount of lines
+    -- TODO: undo history, redo history, yank registers
 } deriving (Show)
 -- Quickly modify buffer content
 editBody :: ([Text] -> [Text]) -> Buffer -> Buffer
@@ -47,7 +50,7 @@ editBody f buf = let text = bufferBody buf
 editFileName :: (FilePath -> FilePath) -> Buffer -> Buffer
 editFileName f buf = let path = bufferFilename buf
                  in buf {bufferFilename = f path}
-editCursors :: (Map Int Cursor -> Map Int Cursor) -> Buffer -> Buffer
+editCursors :: (Cursors -> Cursors) -> Buffer -> Buffer
 editCursors f buf = let cur = bufferCursors buf
                     in buf {bufferCursors = f cur}
 
