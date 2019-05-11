@@ -5,7 +5,7 @@ module Edit.Execute
 
 
 import Control.Monad ((>=>))
-import Data.Map.Strict (Map, member, insert, union, delete, keysSet, keys)
+import Data.Map.Strict (Map, member)
 import Data.Text (Text, pack)
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
@@ -17,6 +17,7 @@ import Edit.Effects (Buffer(..), Effects(..)
                     ,editBody, editFileName, editCursors
                     ,writer, tell)
 
+import Debug.Trace (trace)
 
 -- |Execute editor commands to modify a buffer
 runOneCommand :: Command -> Buffer -> EditAtom
@@ -46,33 +47,33 @@ incLines x = Map.fromAscList . map (addToFst x) . Map.toAscList -- mapKeys
 
 addLineSelection :: LinewiseMovement -> Buffer -> EditAtom
 addLineSelection (AbsoluteNumber line) =
-    return . editCursors (addLine line)
+    return . safeEditCursors (addLine line)
     where addLine line cur = if line `member` cur
                              then cur
-                             else insert line newCursor cur
+                             else Map.insert line newCursor cur
 addLineSelection (RelativeNumber offset) =
-    return . editCursors (addLines offset)
+    return . safeEditCursors (addLines offset)
     where addLines offset cur = let addedCur = incLines offset cur
-                                in union cur addedCur
+                                in Map.union cur addedCur
 
 removeLineSelection :: LinewiseMovement -> Buffer -> EditAtom
 removeLineSelection (AbsoluteNumber line) =
-    return . editCursors (delete line)
+    return . safeEditCursors (Map.delete line)
 removeLineSelection (RelativeNumber offset) =
-    return . editCursors (deleteLines offset)
+    return . safeEditCursors (deleteLines offset)
     where deleteLines offset cur =
-            let toDel = Set.map (+ offset) $ keysSet cur
+            let toDel = Set.map (+ offset) $ Map.keysSet cur
             in Map.withoutKeys cur toDel
 
 moveLineSelection :: LinewiseMovement -> Buffer -> EditAtom
 moveLineSelection (RelativeNumber offset) =
-    return . editCursors (Map.mapKeys (+ offset))
+    return . safeEditCursors (Map.mapKeys (+ offset))
 moveLineSelection (AbsoluteNumber _) = \ buf ->
     consoleLog "Can't move selection in absolute nmbers"
     >> return buf
 
 resetLineSelection :: Buffer -> EditAtom
-resetLineSelection = return . editCursors (const newAllCursors)
+resetLineSelection = return . safeEditCursors (const newAllCursors)
 
 
 --- Line editing commands ---
@@ -111,14 +112,16 @@ linewiseChange textEdit cursorEdit buf =
     let cursorLines = map fst . Map.toAscList $ bufferCursors buf
         lines = bufferBody buf
         newBody = changeByIndex textEdit cursorLines lines
-        newCurs = cursorEdit $ bufferCursors buf
-    in return buf{bufferBody = newBody, bufferCursors = newCurs}
+        size    = length newBody
+        newCurs = checkCursors size . cursorEdit $ bufferCursors buf
+    in return buf{bufferBody = newBody, bufferCursors = newCurs, bufferSize = size}
 
 
 changeByIndex :: (Int -> Text -> [Text]) -> [Int] -> [Text] -> [Text]
 changeByIndex f ind lines = change 1 ind lines where
     change :: Int -> [Int] -> [Text] -> [Text]
-    change _ [] rest = rest
+    change 1 [1] []   = f 1 (pack "") -- special case for empy buffer
+    change _ []  rest = rest
     change curLineNr (curInd:inds) (cline:lines)
         | curLineNr == curInd  =
             (f curInd cline) ++ change (curLineNr + 1) inds lines
@@ -139,3 +142,18 @@ badCommand errmsg buf = writer (buf, [ConsoleLog . pack $ errmsg])
 
 consoleLog :: String -> EffectAtom ()
 consoleLog x = tell [ConsoleLog $ pack x]
+
+
+-- Utility stuff
+
+checkCursors :: Int -> Cursors -> Cursors
+checkCursors size m =
+    let m' = Map.filterWithKey (\k _ -> k > 0 && k <= size) m
+    in if Map.size m' == 0
+       then newAllCursors
+       else m'
+-- Edit cursors and check their bounds
+safeEditCursors :: (Cursors -> Cursors) -> Buffer -> Buffer
+safeEditCursors f buf =
+    let size = bufferSize buf
+    in editCursors (checkCursors size . f) buf
