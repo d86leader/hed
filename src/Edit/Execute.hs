@@ -11,7 +11,7 @@ import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
 import Edit.Command (Command(..), LinewiseMovement(..), CharacterMovement(..)
                     ,VSide(..), HSide(..))
-import Edit.Effects (Buffer(..), Effects(..), EditAtom, EffectAtom
+import Edit.Effects (Buffer(..), Effects(..), EditAtom, EffectAtom, Cursor
                     ,newCursor, newAllCursors
                     ,editBody, editFileName, editCursors
                     ,writer, tell)
@@ -25,6 +25,7 @@ runOneCommand (MoveLineSelection movement) = moveLineSelection movement
 runOneCommand ResetLineSelection = resetLineSelection
 
 runOneCommand (InsertLines side text) = insertLines side text
+runOneCommand DeleteLines = deleteLines
 
 runOneCommand PrintBufferBody = printBufferBody
 runOneCommand WriteBuffer = writeBuffer
@@ -76,13 +77,10 @@ resetLineSelection = return . editCursors (const newAllCursors)
 
 
 insertLines :: VSide -> Text -> Buffer -> EditAtom
-insertLines side insLine buf =
-    let cursorLines = map fst . Map.toAscList $ bufferCursors buf
-        lines = bufferBody buf
-        insert = insertNew side insLine
-        newBody = changeByIndex insert cursorLines lines
-        newCurs = moveCursors side $ bufferCursors buf
-    in return buf{bufferBody = newBody, bufferCursors = newCurs}
+insertLines side insLine =
+    let insert = insertNew side insLine
+        shiftCursors = moveCursors side
+    in linewiseChange insert shiftCursors
     where
         insertNew :: VSide -> Text -> Int -> Text -> [Text]
         insertNew Top toIns _ present = [toIns, present]
@@ -90,6 +88,23 @@ insertLines side insLine buf =
         --
         moveCursors Bottom = id
         moveCursors Top    = Map.mapKeys (+ 1)
+
+
+deleteLines :: Buffer -> EditAtom
+deleteLines =
+    let delete = \_ _ -> []
+    in linewiseChange delete id
+
+
+linewiseChange :: (Int -> Text -> [Text])
+               -> (Map Int Cursor -> Map Int Cursor)
+               -> Buffer -> EditAtom
+linewiseChange textEdit cursorEdit buf =
+    let cursorLines = map fst . Map.toAscList $ bufferCursors buf
+        lines = bufferBody buf
+        newBody = changeByIndex textEdit cursorLines lines
+        newCurs = cursorEdit $ bufferCursors buf
+    in return buf{bufferBody = newBody, bufferCursors = newCurs}
 
 
 changeByIndex :: (Int -> Text -> [Text]) -> [Int] -> [Text] -> [Text]
