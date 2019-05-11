@@ -38,16 +38,16 @@ data Command where
     ResetCharaterSelection   :: CharacterMovement -> Command -- what does this do?
     --
     DeleteLines :: Command
-    ChangeLines :: Command
+    ChangeLines :: Text -> Command
     YankLines   :: Command
     PutLines    :: VSide -> Command
     InsertLines :: VSide -> Text -> Command
     --
     DeleteText :: Command
-    ChangeText :: Command
+    ChangeText :: Text -> Command
     YankText   :: Command
     PutText    :: HSide -> Command
-    InsertText :: HSide -> Command
+    InsertText :: HSide -> Text -> Command
     --
     Undo :: Command
     Redo :: Command
