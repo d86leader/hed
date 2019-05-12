@@ -45,7 +45,8 @@ parseCommand rep ('J':rest) = (AddLineSelection (RelativeNumber rep)) : parseStr
 parseCommand 0 ('K':rest)   = (AddLineSelection (RelativeNumber $ negate 1))   : parseString rest
 parseCommand rep ('K':rest) = (AddLineSelection (RelativeNumber $ negate rep)) : parseString rest
 -- reset line selection
-parseCommand _ ('g':'g':rest) = ResetLineSelection : parseString rest
+parseCommand 0 ('g':'g':rest) = ResetLineSelection : parseString rest
+parseCommand rep ('g':'g':rest) = ResetLineSelection : (MoveLineSelection (AbsoluteNumber rep)) : parseString rest
 
 -- move line selection
 parseCommand 0 ('j':rest)   = (MoveLineSelection (RelativeNumber 1))   : parseString rest

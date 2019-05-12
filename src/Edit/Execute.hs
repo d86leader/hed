@@ -68,9 +68,8 @@ removeLineSelection (RelativeNumber offset) =
 moveLineSelection :: LinewiseMovement -> Buffer -> EditAtom
 moveLineSelection (RelativeNumber offset) =
     return . safeEditCursors (Map.mapKeys (+ offset))
-moveLineSelection (AbsoluteNumber _) = \ buf ->
-    consoleLog "Can't move selection in absolute nmbers"
-    >> return buf
+moveLineSelection (AbsoluteNumber number) = -- reset all cursors to one line
+    return . safeEditCursors (Map.mapKeys (const number))
 
 resetLineSelection :: Buffer -> EditAtom
 resetLineSelection = return . safeEditCursors (const newAllCursors)
