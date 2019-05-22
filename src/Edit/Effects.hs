@@ -34,14 +34,18 @@ newAllCursors = fromAscList [(1, newCursor)]
 -- For ease of function types
 type Cursors = Map Int Cursor
 
+-- Named registers containing a line for each cursor (or less)
+type Registers = Map Char [Text]
+
 
 -- |A buffer that is modified by commands
 data Buffer = Buffer {
-     bufferBody :: [Text]
-    ,bufferFilename :: FilePath
-    ,bufferCursors :: Cursors
-    ,bufferSize :: Int -- amount of lines
-    -- TODO: undo history, redo history, yank registers
+     bufferBody      :: [Text]
+    ,bufferFilename  :: FilePath
+    ,bufferCursors   :: Cursors
+    ,bufferSize      :: Int -- amount of lines
+    ,bufferRegisters :: Registers
+    -- TODO: undo history, redo history
 } deriving (Show)
 -- Quickly modify buffer content
 editBody :: ([Text] -> [Text]) -> Buffer -> Buffer

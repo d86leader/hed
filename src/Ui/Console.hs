@@ -26,10 +26,11 @@ import Util.Text (split2)
 runUi :: IO ()
 runUi = do
     input <- getContents
-    let buffer = Buffer{bufferBody = ["foobar", "barbaz", "keklol", "gotcha"]
-                       ,bufferFilename = "None"
-                       ,bufferCursors = newAllCursors
-                       ,bufferSize = 4
+    let buffer = Buffer{bufferBody      = ["foobar", "barbaz", "keklol", "gotcha"]
+                       ,bufferFilename  = "None"
+                       ,bufferCursors   = newAllCursors
+                       ,bufferSize      = 4
+                       ,bufferRegisters = Map.fromList [('"', [Text.empty])]
                        }
     let commands = parseString input
     let executed = runCommands commands buffer
