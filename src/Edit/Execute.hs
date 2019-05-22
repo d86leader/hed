@@ -53,6 +53,8 @@ runOneCommand YankText  = yankText
 runOneCommand (PutLines side) = putLines side
 runOneCommand (PutText side)  = putText side
 
+runOneCommand (ChangeRegisters name) = changeRegisters name
+
 runOneCommand PrintBufferBody     = printBufferBody
 runOneCommand PrintRegisters      = printRegisters
 runOneCommand WriteBuffer         = writeBuffer
@@ -228,6 +230,13 @@ yankText buf =
         texts = map (\(_, y, _) -> y) parts
     in return . setUnnamed texts $ buf
 
+
+changeRegisters :: Char -> Buffer -> EditAtom
+changeRegisters name buf =
+    let unnamed = getUnnamed buf
+        named   = getRegister name buf
+        buf' = setRegister name unnamed $ setUnnamed named buf
+    in return buf'
 
 
 -- Side-effectful commands

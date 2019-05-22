@@ -51,9 +51,12 @@ data Command where
     YankText   :: Command
     PutText    :: HSide -> Command
     InsertText :: HSide -> Text -> Command
+    AppendPutText :: HSide -> Command
     --
     Undo :: Command
     Redo :: Command
+    --
+    ChangeRegisters :: Char -> Command -- swap unnamed and named registers
     --
     PrintBufferBody :: Command
     PrintRegisters  :: Command

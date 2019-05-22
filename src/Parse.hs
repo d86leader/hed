@@ -126,6 +126,9 @@ parseCommand rep ('}':rest) = (PutLines Bottom) : parseString rest
 parseCommand rep ('[':rest) = (PutText Left)  : parseString rest
 parseCommand rep (']':rest) = (PutText Right) : parseString rest
 
+-- select register
+parseCommand _ ('"':name:rest) = (ChangeRegisters name) : parseString rest
+
 
 -- output
 parseCommand _ ('p':rest) = PrintBufferBody : parseString rest
