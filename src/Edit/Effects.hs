@@ -4,6 +4,7 @@ module Edit.Effects
 , editBody
 , editFileName
 , editCursors
+, editSize
 , editRegister
 
 , getRegister
@@ -58,10 +59,13 @@ editBody f buf = let text = bufferBody buf
                  in buf {bufferBody = f text}
 editFileName :: (FilePath -> FilePath) -> Buffer -> Buffer
 editFileName f buf = let path = bufferFilename buf
-                 in buf {bufferFilename = f path}
+                     in buf {bufferFilename = f path}
 editCursors :: (Cursors -> Cursors) -> Buffer -> Buffer
 editCursors f buf = let cur = bufferCursors buf
                     in buf {bufferCursors = f cur}
+editSize :: (Int -> Int) -> Buffer -> Buffer
+editSize f buf = let size = bufferSize buf
+                 in buf {bufferSize = f size}
 editRegister :: Char -> ([Text] -> [Text]) -> Buffer -> Buffer
 editRegister name f buf = let reg = getRegister name buf
                           in setRegister name (f reg) buf

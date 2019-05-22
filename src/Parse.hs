@@ -115,6 +115,18 @@ parseCommand rep ('c':rest) =
     in (ChangeText text) : parseString rest'
 
 
+-- yank selected lines
+parseCommand rep ('Y':rest) = YankLines : parseString rest
+-- yank selected text
+parseCommand rep ('y':rest) = YankText : parseString rest
+-- put yanked lines
+parseCommand rep ('{':rest) = (PutLines Top)    : parseString rest
+parseCommand rep ('}':rest) = (PutLines Bottom) : parseString rest
+-- put yanked text
+parseCommand rep ('[':rest) = (PutText Left)  : parseString rest
+parseCommand rep (']':rest) = (PutText Right) : parseString rest
+
+
 -- output
 parseCommand _ ('p':rest) = PrintBufferBody : parseString rest
 parseCommand rep (':':rest) = parseLongCommand rep rest

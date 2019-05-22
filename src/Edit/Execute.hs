@@ -17,7 +17,8 @@ import Edit.Command (Command(..), LinewiseMovement(..), CharacterMovement(..)
 import Edit.Effects (Buffer(..), Effects(..), Cursor (..)
                     ,EditAtom, EffectAtom, Cursor, Cursors
                     ,newCursor, newAllCursors
-                    ,editBody, editFileName, editCursors, setRegister
+                    ,editBody, editFileName, editCursors, editSize
+                    ,setRegister ,getRegister, editRegister
                     ,writer, tell)
 import Util.Text (split2)
 
@@ -48,6 +49,8 @@ runOneCommand (InsertText side text) = insertText side text
 
 runOneCommand YankLines = yankLines
 runOneCommand YankText  = yankText
+runOneCommand (PutLines side) = putLines side
+runOneCommand (PutText side)  = putText side
 
 runOneCommand PrintBufferBody     = printBufferBody
 runOneCommand PrintRegisters      = printRegisters
@@ -162,6 +165,18 @@ appendText side text = linewiseChange (change side text) (fmap (move side))
     move Right = id
     move Left = \(Cursor l r) -> Cursor (l + Text.length text) (r + Text.length text)
 
+putLines :: VSide -> Buffer -> EditAtom
+putLines side buf =
+    let inds = map fst . Map.toAscList . bufferCursors $ buf
+        context = zip inds . getUnnamedInf $ buf
+        edit = changeByIndex (insert side) context
+        buf' = editBody edit buf
+        buf'' = editSize (+ length inds) buf'
+    in return buf''
+    where insert :: VSide -> Text -> Text -> [Text]
+          insert Top new old = [new, old]
+          insert Bottom new old = [old, new]
+
 
 -- character (inside-line) editing commands
 
@@ -184,6 +199,10 @@ insertText side text =
     --
     adjust (Cursor l r) = Cursor l (r + Text.length text - 1)
 
+putText :: HSide -> Buffer -> EditAtom
+putText side buf = undefined
+--     characterwiseChange (insert side)
+
 
 -- yank commands
 
@@ -191,7 +210,7 @@ yankLines :: Buffer -> EditAtom
 yankLines buf =
     let inds = map fst . Map.toAscList . bufferCursors $ buf
         lines = getByIndex inds . bufferBody $ buf
-    in return . setRegister '"' lines $ buf
+    in return . setUnnamed lines $ buf
 
 yankText :: Buffer -> EditAtom
 yankText buf =
@@ -201,7 +220,7 @@ yankText buf =
         lines = getByIndex inds . bufferBody $ buf
         parts = zipWith split2 poss lines
         texts = map (\(_, y, _) -> y) parts
-    in return . setRegister '"' texts $ buf
+    in return . setUnnamed texts $ buf
 
 
 
@@ -262,10 +281,11 @@ linewiseChange textEdit cursorEdit buf =
     in return buf{bufferBody = newBody, bufferCursors = newCurs, bufferSize = size}
 
 
--- Line editing combinator that changes each line with cursor
-changeByIndex :: (Cursor -> Text -> [Text]) -> [(Int, Cursor)] -> [Text] -> [Text]
+-- Line editing combinator. It maps each line with some context, and only maps
+-- those lines for which indexed contexts exist.
+-- This has grown from simple map with cursors, so variable names are bad
+changeByIndex :: (a -> Text -> [Text]) -> [(Int, a)] -> [Text] -> [Text]
 changeByIndex f ind lines = change 1 ind lines where
-    change :: Int -> [(Int, Cursor)] -> [Text] -> [Text]
     change 1 [(1, cur)] []   = f cur (pack "") -- special case for empy buffer
     change _ []  rest = rest
     change curLineNr curs@((curInd, cur):inds) (cline:lines) -- TODO: better variable names
@@ -300,3 +320,15 @@ characterwiseChange charEdit oneCursorEdit buf =
     let textEdit c t = [mapWithCursor charEdit c t]
         cursorEdit = fmap oneCursorEdit
     in linewiseChange textEdit cursorEdit buf
+
+
+-- get infinite register suitable for any put
+getRegisterInf :: Char -> Buffer -> [Text]
+getRegisterInf name buf = let cont = getRegister name buf
+                          in cont ++ repeat (last cont)
+
+-- oprations on unnamed register
+getUnnamed = getRegister '"'
+setUnnamed = setRegister '"'
+editUnnamed = editRegister '"'
+getUnnamedInf = getRegisterInf '"'
