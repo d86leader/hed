@@ -15,7 +15,7 @@ data HSide = Left | Right
 data VSide = Top | Bottom
 
 data CharacterMovement where
-    OneStep     :: HSide -> CharacterMovement
+    Steps       :: Int -> CharacterMovement
     FindSymbol  :: Char -> HSide -> CharacterMovement
     ToSymbol    :: Char -> HSide -> CharacterMovement
     ToBeginning :: CharacterMovement
@@ -36,6 +36,7 @@ data Command where
     AddCharacterSelection    :: CharacterMovement -> Command
     RemoveCharacterSelection :: CharacterMovement -> Command
     ResetCharaterSelection   :: CharacterMovement -> Command -- what does this do?
+    MoveCharacterSelection   :: CharacterMovement -> Command
     --
     DeleteLines :: Command
     ChangeLines :: Text -> Command

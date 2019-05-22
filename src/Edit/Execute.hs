@@ -6,18 +6,19 @@ module Edit.Execute
 
 import Control.Monad ((>=>))
 import Data.Map.Strict (Map, member)
-import Data.Text (Text, pack)
+import Data.Text (Text, pack, append)
+
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
+
 import Edit.Command (Command(..), LinewiseMovement(..), CharacterMovement(..)
                     ,VSide(..), HSide(..))
-import Edit.Effects (Buffer(..), Effects(..)
+import Edit.Effects (Buffer(..), Effects(..), Cursor (..)
                     ,EditAtom, EffectAtom, Cursor, Cursors
                     ,newCursor, newAllCursors
                     ,editBody, editFileName, editCursors
                     ,writer, tell)
-
-import Debug.Trace (trace)
+import Util.Text (split2)
 
 -- |Execute editor commands to modify a buffer
 runOneCommand :: Command -> Buffer -> EditAtom
@@ -25,6 +26,10 @@ runOneCommand (AddLineSelection movement) = addLineSelection movement
 runOneCommand (RemoveLineSelection movement) = removeLineSelection movement
 runOneCommand (MoveLineSelection movement) = moveLineSelection movement
 runOneCommand ResetLineSelection = resetLineSelection
+
+runOneCommand (AddCharacterSelection movement) = addCharacterSelection movement
+runOneCommand (ResetCharaterSelection movement) = resetCharacterSelection movement
+runOneCommand (MoveCharacterSelection movement) = moveCharacterSelection movement
 
 runOneCommand (InsertLines side text) = insertLines side text
 runOneCommand DeleteLines = deleteLines
@@ -75,6 +80,34 @@ resetLineSelection :: Buffer -> EditAtom
 resetLineSelection = return . safeEditCursors (const newAllCursors)
 
 
+--- Character selection commands ---
+
+addCharacterSelection :: CharacterMovement -> Buffer -> EditAtom
+addCharacterSelection (Steps offset) =
+    return . editCursors (fmap $ addToSide offset)
+    where addToSide x (Cursor l r)
+            | x == 0  = Cursor l r
+            | x < 0   = Cursor (l + x) r
+            | x > 0   = Cursor l (r + x)
+addCharacterSelection ToBeginning =
+    return . editCursors (fmap $ \(Cursor _ r) -> Cursor 0 r)
+addCharacterSelection ToEnd =
+    return . editCursors (fmap $ \(Cursor l _) -> Cursor l maxBound)
+addCharacterSelection _ = badCommand "Movement not supported"
+
+
+resetCharacterSelection :: CharacterMovement -> Buffer -> EditAtom
+resetCharacterSelection ToBeginning =
+    return . editCursors (fmap . const $ Cursor 0 0)
+resetCharacterSelection _ = badCommand "Movement not supported"
+
+moveCharacterSelection :: CharacterMovement -> Buffer -> EditAtom
+moveCharacterSelection (Steps offset) = 
+    return . editCursors (fmap $ addToSides offset)
+    where addToSides x (Cursor l r) = Cursor (l+x) (r+x)
+moveCharacterSelection _ = badCommand "Movement not supported"
+
+
 --- Line editing commands ---
 
 
@@ -84,7 +117,7 @@ insertLines side insLine =
         shiftCursors = moveCursors side
     in linewiseChange insert shiftCursors
     where
-        insertNew :: VSide -> Text -> Int -> Text -> [Text]
+        insertNew :: VSide -> Text -> Cursor -> Text -> [Text]
         insertNew Top toIns _ present = [toIns, present]
         insertNew Bottom toIns _ present = [present, toIns]
         --
@@ -104,11 +137,11 @@ changeLines text =
     in linewiseChange change id
 
 
-linewiseChange :: (Int -> Text -> [Text])
+linewiseChange :: (Cursor -> Text -> [Text])
                -> (Cursors -> Cursors)
                -> Buffer -> EditAtom
 linewiseChange textEdit cursorEdit buf =
-    let cursorLines = map fst . Map.toAscList $ bufferCursors buf
+    let cursorLines = Map.toAscList $ bufferCursors buf
         lines = bufferBody buf
         newBody = changeByIndex textEdit cursorLines lines
         size    = length newBody
@@ -116,15 +149,33 @@ linewiseChange textEdit cursorEdit buf =
     in return buf{bufferBody = newBody, bufferCursors = newCurs, bufferSize = size}
 
 
-changeByIndex :: (Int -> Text -> [Text]) -> [Int] -> [Text] -> [Text]
+changeByIndex :: (Cursor -> Text -> [Text]) -> [(Int, Cursor)] -> [Text] -> [Text]
 changeByIndex f ind lines = change 1 ind lines where
-    change :: Int -> [Int] -> [Text] -> [Text]
-    change 1 [1] []   = f 1 (pack "") -- special case for empy buffer
+    change :: Int -> [(Int, Cursor)] -> [Text] -> [Text]
+    change 1 [(1, cur)] []   = f cur (pack "") -- special case for empy buffer
     change _ []  rest = rest
-    change curLineNr (curInd:inds) (cline:lines)
+    change curLineNr curs@((curInd, cur):inds) (cline:lines)
         | curLineNr == curInd  =
-            (f curInd cline) ++ change (curLineNr + 1) inds lines
-        | otherwise  = cline : change (curLineNr + 1) (curInd:inds) lines
+            (f cur cline) ++ change (curLineNr + 1) inds lines
+        | otherwise  = cline : change (curLineNr + 1) curs lines
+
+
+-- character (inside-line) editing commands
+
+
+mapWithCursor :: (Text -> Text) -> Cursor -> Text -> Text
+mapWithCursor f (Cursor l r) text =
+    let (left, mid, right) = split2 (l, r) text
+    in left `append` f mid `append` right
+
+characterwiseChange :: (Text -> Text)
+                    -> (Cursors -> Cursors)
+                    -> Buffer -> EditAtom
+characterwiseChange charEdit cursorEdit buf =
+    let textEdit c t = [mapWithCursor charEdit c t]
+    in linewiseChange textEdit cursorEdit buf
+
+
 
 
 

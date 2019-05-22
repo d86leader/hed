@@ -48,11 +48,28 @@ parseCommand rep ('K':rest) = (AddLineSelection (RelativeNumber $ negate rep)) :
 parseCommand 0 ('g':'g':rest) = ResetLineSelection : parseString rest
 parseCommand rep ('g':'g':rest) = ResetLineSelection : (MoveLineSelection (AbsoluteNumber rep)) : parseString rest
 
+-- add character selection
+parseCommand 0   ('H':rest) = (AddCharacterSelection (Steps $ negate 1))   : parseString rest
+parseCommand rep ('H':rest) = (AddCharacterSelection (Steps $ negate rep)) : parseString rest
+parseCommand 0   ('L':rest) = (AddCharacterSelection (Steps 1))   : parseString rest
+parseCommand rep ('L':rest) = (AddCharacterSelection (Steps rep)) : parseString rest
+parseCommand _   ('B':rest) = (AddCharacterSelection ToBeginning) : parseString rest
+parseCommand _   ('E':rest) = (AddCharacterSelection ToEnd) : parseString rest
+-- reset character selection
+parseCommand _ ('0':rest) = (ResetCharaterSelection ToBeginning) : parseString rest
+
 -- move line selection
 parseCommand 0 ('j':rest)   = (MoveLineSelection (RelativeNumber 1))   : parseString rest
 parseCommand rep ('j':rest) = (MoveLineSelection (RelativeNumber rep)) : parseString rest
 parseCommand 0 ('k':rest)   = (MoveLineSelection (RelativeNumber $ negate 1))   : parseString rest
 parseCommand rep ('k':rest) = (MoveLineSelection (RelativeNumber $ negate rep)) : parseString rest
+
+-- move character selection
+parseCommand 0   ('h':rest) = (MoveCharacterSelection (Steps $ negate 1))   : parseString rest
+parseCommand rep ('h':rest) = (MoveCharacterSelection (Steps $ negate rep)) : parseString rest
+parseCommand 0   ('l':rest) = (MoveCharacterSelection (Steps 1))   : parseString rest
+parseCommand rep ('l':rest) = (MoveCharacterSelection (Steps rep)) : parseString rest
+
 
 -- insert new lines
 parseCommand rep ('o':rest) =
@@ -63,10 +80,10 @@ parseCommand rep ('O':rest) =
     in (InsertLines Top text) : parseString rest'
 
 -- delete lines selected
-parseCommand _ ('d':rest) = DeleteLines : parseString rest
+parseCommand _ ('D':rest) = DeleteLines : parseString rest
 
 -- change selected lines
-parseCommand rep ('c':rest) =
+parseCommand rep ('C':rest) =
     let (text, rest') = parseInsert rep rest
     in (ChangeLines text) : parseString rest'
 

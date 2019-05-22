@@ -18,6 +18,7 @@ import Parse (parseString)
 import Edit.Execute (runCommands)
 import Edit.Effects (Buffer(..), Effects(..), Cursor(..)
                     ,newCursor, newAllCursors, runEffects)
+import Util.Text (split2)
 
 
 -- |Get user input from command line, parse it, execute it in free context, and
@@ -68,13 +69,7 @@ printBuffer buf =
     -- Split text on cursor indicies if cursor is present
     splitOnCur :: Text -> Maybe Cursor -> Either Text (Text, Text, Text)
     splitOnCur text Nothing = Left text
-    splitOnCur text (Just (Cursor l r)) =
-        let len = Text.length text
-            roff = len - r - 1 -- right offset, how l is left offset
-            left  = Text.take l text
-            right = Text.takeEnd roff text
-            mid   = Text.drop l . Text.dropEnd roff $ text
-        in Right (left, mid, right)
+    splitOnCur text (Just (Cursor l r)) = Right $ split2 (l, r) text
     --
     -- join the text and highlight the middle chunk
     joinHighlight :: Either Text (Text, Text, Text) -> Text
