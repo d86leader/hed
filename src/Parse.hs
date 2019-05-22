@@ -90,6 +90,14 @@ parseCommand rep ('C':rest) =
     let (text, rest') = parseInsert rep rest
     in (ChangeLines text) : parseString rest'
 
+-- append text to line
+parseCommand rep ('I':rest) = 
+    let (text, rest') = parseInsert rep rest
+    in (AppendText Left text) : parseString rest'
+parseCommand rep ('A':rest) = 
+    let (text, rest') = parseInsert rep rest
+    in (AppendText Right text) : parseString rest'
+
 -- delete text selected
 parseCommand _ ('d':rest) = DeleteText : parseString rest
 

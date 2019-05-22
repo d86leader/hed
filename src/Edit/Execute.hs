@@ -39,6 +39,8 @@ runOneCommand (InsertLines side text) = insertLines side text
 runOneCommand DeleteLines = deleteLines
 runOneCommand (ChangeLines text) = changeLines text
 
+runOneCommand (AppendText side text) = appendText side text
+
 runOneCommand DeleteText = deleteText
 runOneCommand (ChangeText text) = changeText text
 runOneCommand (InsertText side text) = insertText side text
@@ -125,7 +127,7 @@ insertLines side insLine =
         shiftCursors = moveCursors side
     in linewiseChange insert shiftCursors
     where
-        insertNew :: VSide -> Text -> Cursor -> Text -> [Text]
+        insertNew :: VSide -> Text -> a -> Text -> [Text]
         insertNew Top toIns _ present = [toIns, present]
         insertNew Bottom toIns _ present = [present, toIns]
         --
@@ -145,44 +147,18 @@ changeLines text =
     in linewiseChange change id
 
 
-linewiseChange :: (Cursor -> Text -> [Text])
-               -> (Cursors -> Cursors)
-               -> Buffer -> EditAtom
-linewiseChange textEdit cursorEdit buf =
-    let cursorLines = Map.toAscList $ bufferCursors buf
-        lines = bufferBody buf
-        newBody = changeByIndex textEdit cursorLines lines
-        size    = length newBody
-        newCurs = checkCursors size . cursorEdit $ bufferCursors buf
-    in return buf{bufferBody = newBody, bufferCursors = newCurs, bufferSize = size}
-
-
-changeByIndex :: (Cursor -> Text -> [Text]) -> [(Int, Cursor)] -> [Text] -> [Text]
-changeByIndex f ind lines = change 1 ind lines where
-    change :: Int -> [(Int, Cursor)] -> [Text] -> [Text]
-    change 1 [(1, cur)] []   = f cur (pack "") -- special case for empy buffer
-    change _ []  rest = rest
-    change curLineNr curs@((curInd, cur):inds) (cline:lines)
-        | curLineNr == curInd  =
-            (f cur cline) ++ change (curLineNr + 1) inds lines
-        | otherwise  = cline : change (curLineNr + 1) curs lines
+appendText :: HSide -> Text -> Buffer -> EditAtom
+appendText side text = linewiseChange (change side text) (fmap (move side))
+    where
+    change :: HSide -> Text -> a -> Text -> [Text]
+    change Left  new _ old = [new `append` old]
+    change Right new _ old = [old `append` new]
+    --
+    move Right = id
+    move Left = \(Cursor l r) -> Cursor (l + Text.length text) (r + Text.length text)
 
 
 -- character (inside-line) editing commands
-
-
-mapWithCursor :: (Text -> Text) -> Cursor -> Text -> Text
-mapWithCursor f (Cursor l r) text =
-    let (left, mid, right) = split2 (l, r) text
-    in left `append` f mid `append` right
-
-characterwiseChange :: (Text -> Text)
-                    -> (Cursor -> Cursor)
-                    -> Buffer -> EditAtom
-characterwiseChange charEdit oneCursorEdit buf =
-    let textEdit c t = [mapWithCursor charEdit c t]
-        cursorEdit = fmap oneCursorEdit
-    in linewiseChange textEdit cursorEdit buf
 
 
 deleteText :: Buffer -> EditAtom
@@ -233,3 +209,45 @@ safeEditCursors :: (Cursors -> Cursors) -> Buffer -> Buffer
 safeEditCursors f buf =
     let size = bufferSize buf
     in editCursors (checkCursors size . f) buf
+
+
+-- Main line editing combinator
+linewiseChange :: (Cursor -> Text -> [Text])
+               -> (Cursors -> Cursors)
+               -> Buffer -> EditAtom
+linewiseChange textEdit cursorEdit buf =
+    let cursorLines = Map.toAscList $ bufferCursors buf
+        lines = bufferBody buf
+        newBody = changeByIndex textEdit cursorLines lines
+        size    = length newBody
+        newCurs = checkCursors size . cursorEdit $ bufferCursors buf
+    in return buf{bufferBody = newBody, bufferCursors = newCurs, bufferSize = size}
+
+
+-- Line editing combinator that changes each line with cursor
+changeByIndex :: (Cursor -> Text -> [Text]) -> [(Int, Cursor)] -> [Text] -> [Text]
+changeByIndex f ind lines = change 1 ind lines where
+    change :: Int -> [(Int, Cursor)] -> [Text] -> [Text]
+    change 1 [(1, cur)] []   = f cur (pack "") -- special case for empy buffer
+    change _ []  rest = rest
+    change curLineNr curs@((curInd, cur):inds) (cline:lines)
+        | curLineNr == curInd  =
+            (f cur cline) ++ change (curLineNr + 1) inds lines
+        | otherwise  = cline : change (curLineNr + 1) curs lines
+
+
+-- Character editing combinator that changes one line with cursor
+mapWithCursor :: (Text -> Text) -> Cursor -> Text -> Text
+mapWithCursor f (Cursor l r) text =
+    let (left, mid, right) = split2 (l, r) text
+    in left `append` f mid `append` right
+
+
+-- Main character editing combinator
+characterwiseChange :: (Text -> Text)
+                    -> (Cursor -> Cursor)
+                    -> Buffer -> EditAtom
+characterwiseChange charEdit oneCursorEdit buf =
+    let textEdit c t = [mapWithCursor charEdit c t]
+        cursorEdit = fmap oneCursorEdit
+    in linewiseChange textEdit cursorEdit buf

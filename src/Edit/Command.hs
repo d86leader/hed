@@ -44,6 +44,8 @@ data Command where
     PutLines    :: VSide -> Command
     InsertLines :: VSide -> Text -> Command
     --
+    AppendText :: HSide -> Text -> Command
+    --
     DeleteText :: Command
     ChangeText :: Text -> Command
     YankText   :: Command
