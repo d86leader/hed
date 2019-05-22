@@ -6,10 +6,11 @@ module Edit.Execute
 
 import Control.Monad ((>=>))
 import Data.Map.Strict (Map, member)
-import Data.Text (Text, pack, append)
+import Data.Text (Text, pack, append, empty)
 
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
 
 import Edit.Command (Command(..), LinewiseMovement(..), CharacterMovement(..)
                     ,VSide(..), HSide(..))
@@ -19,6 +20,9 @@ import Edit.Effects (Buffer(..), Effects(..), Cursor (..)
                     ,editBody, editFileName, editCursors
                     ,writer, tell)
 import Util.Text (split2)
+
+import Prelude hiding (Left, Right)
+
 
 -- |Execute editor commands to modify a buffer
 runOneCommand :: Command -> Buffer -> EditAtom
@@ -34,6 +38,10 @@ runOneCommand (MoveCharacterSelection movement) = moveCharacterSelection movemen
 runOneCommand (InsertLines side text) = insertLines side text
 runOneCommand DeleteLines = deleteLines
 runOneCommand (ChangeLines text) = changeLines text
+
+runOneCommand DeleteText = deleteText
+runOneCommand (ChangeText text) = changeText text
+runOneCommand (InsertText side text) = insertText side text
 
 runOneCommand PrintBufferBody = printBufferBody
 runOneCommand WriteBuffer = writeBuffer
@@ -169,13 +177,31 @@ mapWithCursor f (Cursor l r) text =
     in left `append` f mid `append` right
 
 characterwiseChange :: (Text -> Text)
-                    -> (Cursors -> Cursors)
+                    -> (Cursor -> Cursor)
                     -> Buffer -> EditAtom
-characterwiseChange charEdit cursorEdit buf =
+characterwiseChange charEdit oneCursorEdit buf =
     let textEdit c t = [mapWithCursor charEdit c t]
+        cursorEdit = fmap oneCursorEdit
     in linewiseChange textEdit cursorEdit buf
 
 
+deleteText :: Buffer -> EditAtom
+deleteText = characterwiseChange (const empty) toLeft
+    where toLeft (Cursor l _) = Cursor l l
+
+changeText :: Text -> Buffer -> EditAtom
+changeText text = characterwiseChange (const text) adjust
+    where adjust (Cursor l _) = Cursor l (l + Text.length text - 1)
+
+insertText :: HSide -> Text -> Buffer -> EditAtom
+insertText side text =
+    characterwiseChange (insert side text) adjust
+    where
+    insert :: HSide -> Text -> Text -> Text
+    insert Left  new old = new `append` old
+    insert Right new old = old `append` new
+    --
+    adjust (Cursor l r) = Cursor l (r + Text.length text - 1)
 
 
 

@@ -6,7 +6,10 @@ module Parse
 import Data.Char (isDigit, digitToInt)
 import Edit.Command -- import all datatypes
 import Data.Text (Text, pack)
+
 import qualified Data.Text as Text
+
+import Prelude hiding (Left, Right)
 
 
 -- my commands are regular, so a simple pattern matching will do for parsing
@@ -86,6 +89,23 @@ parseCommand _ ('D':rest) = DeleteLines : parseString rest
 parseCommand rep ('C':rest) =
     let (text, rest') = parseInsert rep rest
     in (ChangeLines text) : parseString rest'
+
+-- delete text selected
+parseCommand _ ('d':rest) = DeleteText : parseString rest
+
+-- insert new text
+parseCommand rep ('i':rest) = 
+    let (text, rest') = parseInsert rep rest
+    in (InsertText Left text) : parseString rest'
+parseCommand rep ('a':rest) = 
+    let (text, rest') = parseInsert rep rest
+    in (InsertText Right text) : parseString rest'
+
+-- change selected text
+parseCommand rep ('c':rest) = 
+    let (text, rest') = parseInsert rep rest
+    in (ChangeText text) : parseString rest'
+
 
 -- output
 parseCommand _ ('p':rest) = PrintBufferBody : parseString rest
