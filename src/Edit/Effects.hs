@@ -4,6 +4,10 @@ module Edit.Effects
 , editBody
 , editFileName
 , editCursors
+, editRegister
+
+, getRegister
+, setRegister
 
 , Effects(..) -- |Side effects when editing a file
 , EffectAtom  -- |A monad writer that tracks side effects of editing
@@ -16,8 +20,8 @@ module Edit.Effects
 , newCursor, newAllCursors
 ) where
 
-import Data.Text (Text)
-import Data.Map.Strict (Map, fromAscList)
+import Data.Text (Text, empty)
+import Data.Map.Strict (Map, fromAscList, findWithDefault, alter)
 import Control.Monad.Writer.Lazy (Writer, writer, tell, listen, pass
                                  ,runWriter)
 
@@ -35,6 +39,7 @@ newAllCursors = fromAscList [(1, newCursor)]
 type Cursors = Map Int Cursor
 
 -- Named registers containing a line for each cursor (or less)
+-- vim-like notation, so " for unnamed
 type Registers = Map Char [Text]
 
 
@@ -57,6 +62,19 @@ editFileName f buf = let path = bufferFilename buf
 editCursors :: (Cursors -> Cursors) -> Buffer -> Buffer
 editCursors f buf = let cur = bufferCursors buf
                     in buf {bufferCursors = f cur}
+editRegister :: Char -> ([Text] -> [Text]) -> Buffer -> Buffer
+editRegister name f buf = let reg = getRegister name buf
+                          in setRegister name (f reg) buf
+
+-- convenience register functions
+getRegister :: Char -> Buffer -> [Text]
+getRegister name buf = findWithDefault [empty] name $ bufferRegisters buf
+
+setRegister :: Char -> [Text] -> Buffer -> Buffer
+setRegister name content buf =
+    let regs = bufferRegisters buf
+        regs' = alter (const $ Just content) name regs
+    in buf{bufferRegisters = regs'}
 
 -- |Side effects that can occur when execting commands
 data Effects where

@@ -17,7 +17,7 @@ import Edit.Command (Command(..), LinewiseMovement(..), CharacterMovement(..)
 import Edit.Effects (Buffer(..), Effects(..), Cursor (..)
                     ,EditAtom, EffectAtom, Cursor, Cursors
                     ,newCursor, newAllCursors
-                    ,editBody, editFileName, editCursors
+                    ,editBody, editFileName, editCursors, setRegister
                     ,writer, tell)
 import Util.Text (split2)
 
@@ -26,27 +26,32 @@ import Prelude hiding (Left, Right)
 
 -- |Execute editor commands to modify a buffer
 runOneCommand :: Command -> Buffer -> EditAtom
-runOneCommand (AddLineSelection movement) = addLineSelection movement
-runOneCommand (RemoveLineSelection movement) = removeLineSelection movement
-runOneCommand (MoveLineSelection movement) = moveLineSelection movement
-runOneCommand ResetLineSelection = resetLineSelection
 
-runOneCommand (AddCharacterSelection movement) = addCharacterSelection movement
+runOneCommand (AddLineSelection movement)    = addLineSelection movement
+runOneCommand (RemoveLineSelection movement) = removeLineSelection movement
+runOneCommand (MoveLineSelection movement)   = moveLineSelection movement
+runOneCommand ResetLineSelection             = resetLineSelection
+
+runOneCommand (AddCharacterSelection movement)  = addCharacterSelection movement
 runOneCommand (ResetCharaterSelection movement) = resetCharacterSelection movement
 runOneCommand (MoveCharacterSelection movement) = moveCharacterSelection movement
 
 runOneCommand (InsertLines side text) = insertLines side text
-runOneCommand DeleteLines = deleteLines
-runOneCommand (ChangeLines text) = changeLines text
+runOneCommand DeleteLines             = deleteLines
+runOneCommand (ChangeLines text)      = changeLines text
 
 runOneCommand (AppendText side text) = appendText side text
 
-runOneCommand DeleteText = deleteText
-runOneCommand (ChangeText text) = changeText text
+runOneCommand DeleteText             = deleteText
+runOneCommand (ChangeText text)      = changeText text
 runOneCommand (InsertText side text) = insertText side text
 
-runOneCommand PrintBufferBody = printBufferBody
-runOneCommand WriteBuffer = writeBuffer
+runOneCommand YankLines = yankLines
+runOneCommand YankText  = yankText
+
+runOneCommand PrintBufferBody     = printBufferBody
+runOneCommand PrintRegisters      = printRegisters
+runOneCommand WriteBuffer         = writeBuffer
 runOneCommand (BadCommand errmsg) = badCommand errmsg
 
 -- |Execute a line of commands monadically
@@ -180,11 +185,44 @@ insertText side text =
     adjust (Cursor l r) = Cursor l (r + Text.length text - 1)
 
 
+-- yank commands
+
+yankLines :: Buffer -> EditAtom
+yankLines buf =
+    let inds = map fst . Map.toAscList . bufferCursors $ buf
+        lines = getByIndex inds . bufferBody $ buf
+    in return . setRegister '"' lines $ buf
+
+yankText :: Buffer -> EditAtom
+yankText buf =
+    let curs = Map.toAscList . bufferCursors $ buf
+        inds = map fst curs
+        poss = map (\(Cursor l r) -> (l, r)) . map snd $ curs
+        lines = getByIndex inds . bufferBody $ buf
+        parts = zipWith split2 poss lines
+        texts = map (\(_, y, _) -> y) parts
+    in return . setRegister '"' texts $ buf
+
+
 
 -- Side-effectful commands
 
 printBufferBody :: Buffer -> EditAtom
 printBufferBody buf = writer (buf, [PrintBuffer buf])
+
+printRegisters :: Buffer -> EditAtom
+printRegisters buf =
+    let regs = Map.toAscList . bufferRegisters $ buf
+        pretty = map printReg regs
+        printEff = mapM_ tell pretty
+    in printEff >> return buf
+    where printReg :: (Char, [Text]) -> [Effects]
+          printReg (name, cont) =
+            let header = pack $ '"':name:' ':[]
+                first = header `append` head cont
+                rest  = map (append $ pack "   ") $ tail cont
+                bodies = first:rest
+            in map ConsoleLog bodies
 
 writeBuffer :: Buffer -> EditAtom
 writeBuffer buf = writer (buf, [WriteFile buf])
@@ -230,10 +268,21 @@ changeByIndex f ind lines = change 1 ind lines where
     change :: Int -> [(Int, Cursor)] -> [Text] -> [Text]
     change 1 [(1, cur)] []   = f cur (pack "") -- special case for empy buffer
     change _ []  rest = rest
-    change curLineNr curs@((curInd, cur):inds) (cline:lines)
+    change curLineNr curs@((curInd, cur):inds) (cline:lines) -- TODO: better variable names
         | curLineNr == curInd  =
             (f cur cline) ++ change (curLineNr + 1) inds lines
         | otherwise  = cline : change (curLineNr + 1) curs lines
+
+
+-- Get lines; indexed from 1
+getByIndex :: [Int] -> [Text] -> [Text]
+getByIndex = getByIndex' 1 where
+    getByIndex' :: Int -> [Int] -> [Text] -> [Text]
+    getByIndex' 1 [1] [] = [pack ""] -- special case for empty buffer
+    getByIndex' _ []  _  = []
+    getByIndex' current (ind:inds) (line:lines)
+        | current == ind  = line : getByIndex' (current + 1) inds lines
+        | otherwise  = getByIndex' (current + 1) (ind:inds) lines
 
 
 -- Character editing combinator that changes one line with cursor

@@ -83,7 +83,7 @@ parseCommand rep ('O':rest) =
     in (InsertLines Top text) : parseString rest'
 
 -- delete lines selected
-parseCommand _ ('D':rest) = DeleteLines : parseString rest
+parseCommand _ ('D':rest) = YankLines : DeleteLines : parseString rest
 
 -- change selected lines
 parseCommand rep ('C':rest) =
@@ -99,7 +99,7 @@ parseCommand rep ('A':rest) =
     in (AppendText Right text) : parseString rest'
 
 -- delete text selected
-parseCommand _ ('d':rest) = DeleteText : parseString rest
+parseCommand _ ('d':rest) = YankText : DeleteText : parseString rest
 
 -- insert new text
 parseCommand rep ('i':rest) = 
@@ -134,6 +134,7 @@ parseLongCommand :: Int -> String -> [Command]
 parseLongCommand _ ('p':'r':'i':'n':'t':'\n':rest) = PrintBufferBody : parseString rest
 parseLongCommand _ ('w':'\n':rest) = WriteBuffer : parseString rest
 parseLongCommand _ ('q':'\n':rest) = [] -- stop parsing
+parseLongCommand _ ('r':'e':'g':'s':'\n':rest) = PrintRegisters : parseString rest
 parseLongCommand _ (_:rest) = BadCommand "Multichar commands are wip, please use them carefully"
                               : parseString rest
 

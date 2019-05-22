@@ -56,6 +56,7 @@ data Command where
     Redo :: Command
     --
     PrintBufferBody :: Command
-    WriteBuffer :: Command
+    PrintRegisters  :: Command
+    WriteBuffer     :: Command
     --
     BadCommand :: String -> Command -- contains error message
