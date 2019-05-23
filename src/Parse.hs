@@ -165,8 +165,8 @@ parseInsert rep' text =
 
 -- A function to turn the Either above to text commands
 commandFromEither :: Either Char Text -> Command
-commandFromEither (Left name) = PutTextFrom hleft name
-commandFromEither (Right text) = InsertText hleft text
+commandFromEither (Left name) = PutTextFrom hright name
+commandFromEither (Right text) = InsertText hright text
 
 
 insertCombinator :: (Text -> Command)
