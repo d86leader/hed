@@ -288,7 +288,7 @@ safeEditCursors f buf =
     in editCursors (checkCursors size . f) buf
 
 
--- Main line editing combinator
+-- Main line editing combinator; Wraps the one below nicely into editAtom
 linewiseChangeCombinator :: [a]
                          -> (a -> Text -> [Text])
                          -> (Cursors -> Cursors)
@@ -314,14 +314,34 @@ linewiseChange textEdit cursorEdit buf =
 -- Line editing combinator. It maps each line with some context, and only maps
 -- those lines for which indexed contexts exist.
 -- This has grown from simple map with cursors, so variable names are bad
-changeByIndex :: (a -> Text -> [Text]) -> [(Int, a)] -> [Text] -> [Text]
-changeByIndex f ind lines = change 1 ind lines where
-    change 1 [(1, cur)] []   = f cur (pack "") -- special case for empy buffer
-    change _ []  rest = rest
-    change curLineNr curs@((curInd, cur):inds) (cline:lines) -- TODO: better variable names
-        | curLineNr == curInd  =
-            (f cur cline) ++ change (curLineNr + 1) inds lines
-        | otherwise  = cline : change (curLineNr + 1) curs lines
+changeByIndex' :: (a -> Text -> [Text]) -- text editor
+              -> (a -> Text -> [b]) -- context editor
+              -> [(Int, a)] -- line numbers to edit and context for each line
+              -> [Text] -> ([Text], [b])
+changeByIndex' textEdit contEdit context lines =
+    let (inds, conts) = unzip context
+    in  change 1 inds conts lines
+    where
+    -- special case which only happens in empty buffer
+    change 1 [1] [x] [] = (textEdit x empty, contEdit x empty)
+    -- base: no more lines selected
+    change _ [] _ restLines = (restLines, [])
+    -- main recursive case
+    change curLineNr (ind:inds) (cont:conts) (line:lines)
+        | curLineNr == ind  =
+            let (recLines, recConts) = change (curLineNr + 1) inds conts lines
+                curLines = textEdit cont line
+                curConts = contEdit cont line
+            in (curLines ++ recLines, curConts ++ recConts)
+        | otherwise  =
+            let (recLines, recConts) =
+                    change (curLineNr + 1) (ind:inds) (cont:conts) lines
+            in (line:recLines, recConts)
+
+changeByIndex :: (a -> Text -> [Text]) -- text editor
+              -> [(Int, a)] -- line numbers to edit and context for each line
+              -> [Text] -> [Text]
+changeByIndex f ind = fst . changeByIndex' f (\x _ -> [x]) ind
 
 
 -- Get lines; indexed from 1
