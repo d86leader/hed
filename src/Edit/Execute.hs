@@ -158,11 +158,11 @@ deleteLines =
 changeLines :: Text -> Buffer -> EditAtom
 changeLines text =
     let change _ _ = text
-    in linewiseChange change id
+    in wholeLineChange change id
 
 
 appendText :: HSide -> Text -> Buffer -> EditAtom
-appendText side text = linewiseChange (change side text) (move side)
+appendText side text = wholeLineChange (change side text) (move side)
     where
     change :: HSide -> Text -> a -> Text -> Text
     change Left  new _ old = new `append` old
@@ -309,69 +309,6 @@ safeEditCursors f buf =
     in editCursors (checkCursors size . f) buf
 
 
--- Main line editing combinator; Wraps changeByIndex nicely into editAtom
-linewiseChangeCombinator :: [a]
-                         -> (a -> Text -> [Text])
-                         -> (Cursors -> Cursors)
-                         -> Buffer -> EditAtom
-linewiseChangeCombinator context textEdit cursorEdit buf =
-    let inds = map fst . Map.toAscList . bufferCursors $ buf
-        fullContext = zip inds context
-        newBody = changeByIndex' textEdit fullContext $ bufferBody buf
-        size    = length newBody
-        newCurs = checkCursors size . cursorEdit $ bufferCursors buf
-    in return buf{bufferBody = newBody, bufferCursors = newCurs, bufferSize = size}
-    where contextEdit x _ = [x]
-
-
--- Change only one line
-linewiseChange :: (Cursor -> Text -> Text)
-               -> (Cursor -> Cursor)
-               -> Buffer -> EditAtom
-linewiseChange textEdit cursorEdit buf =
-    let cursorLines = map snd . Map.toAscList $ bufferCursors buf
-        textEdit' c t = [textEdit c t]
-        cursorEdit' = fmap cursorEdit
-    in inline linewiseChangeCombinator cursorLines textEdit' cursorEdit' buf
-
-
--- Line editing combinator for actions that can add or remove lines
-changeKeepPositions :: (a -> Text -> [Text]) -- text editor
-                    -> (a -> Text -> [(Int, Cursor)]) -- cursor editor
-                    -> [a] -> Int -- context and amount of lines inserted for each
-                    -> Buffer -> EditAtom
-changeKeepPositions textEdit cursorEdit context insam buf =
-    let cursors = Map.toAscList $ bufferCursors buf
-        inds = map fst cursors
-        shifts = map (* insam) [0, 1 ..]
-        fullContext = zip inds $ zip shifts context
-        body = bufferBody buf
-        --
-        (newBody, newCursors) = changeByIndex textEdit' cursorEdit' fullContext body
-        newSize = length newBody
-        newCursors' = checkCursors newSize . Map.fromAscList $ newCursors
-    in return buf{bufferBody = newBody
-                 ,bufferSize = newSize
-                 ,bufferCursors = newCursors'
-                 }
-    where
-    onFst f (x, y) = (f x, y)
-    cursorEdit' (shift, a) text =
-        let curs = cursorEdit a text
-        in map (onFst (+ shift)) curs
-    --
-    textEdit' (_, a) = textEdit a
-
--- combinator above specified for cursor context
-changeKeepPositions' :: ((Int, Cursor) -> Text -> [Text])
-                     -> ((Int, Cursor) -> Text -> [(Int, Cursor)])
-                     -> Int
-                     -> Buffer -> EditAtom
-changeKeepPositions' textEdit cursorEdit insam buf =
-    let context = Map.toAscList . bufferCursors $ buf
-    in inline changeKeepPositions textEdit cursorEdit context insam buf
-
-
 -- Line editing combinator. It maps each line with some context, and only maps
 -- those lines for which indexed contexts exist.
 changeByIndex :: (a -> Text -> [Text]) -- text editor
@@ -405,6 +342,59 @@ changeByIndex' :: (a -> Text -> [Text]) -- text editor
 changeByIndex' f ind = fst . inline changeByIndex f (\x _ -> [x]) ind
 
 
+-- Main line editing combinator; Wraps changeByIndex nicely into editAtom
+linewiseChangeCombinator :: (a -> Text -> [Text]) -- text editor
+                         -> (a -> Text -> [(Int, Cursor)]) -- cursor editor
+                         -> [a] -- context
+                         -> Buffer -> EditAtom
+linewiseChangeCombinator textEdit contextEdit context buf =
+    let inds = map fst . Map.toAscList . bufferCursors $ buf
+        fullContext = zip inds context
+        (newBody, newCurs) = changeByIndex textEdit contextEdit fullContext $ bufferBody buf
+        size    = length newBody
+        newCurs' = checkCursors size . Map.fromAscList $ newCurs
+    in return buf{bufferBody = newBody, bufferCursors = newCurs', bufferSize = size}
+
+
+-- Change only one line
+wholeLineChange :: (Cursor -> Text -> Text)
+               -> (Cursor -> Cursor)
+               -> Buffer -> EditAtom
+wholeLineChange textEdit cursorEdit buf =
+    let textEdit' (_, c) t = [textEdit c t]
+        cursorEdit' (line, cur) _ = [(line, cursorEdit cur)]
+        context = Map.toAscList . bufferCursors $ buf
+    in linewiseChangeCombinator textEdit' cursorEdit' context buf
+
+
+-- Line editing combinator for actions that can add or remove lines
+changeKeepPositions :: (a -> Text -> [Text]) -- text editor
+                    -> (a -> Text -> [(Int, Cursor)]) -- cursor editor
+                    -> [a] -> Int -- context and amount of lines inserted for each
+                    -> Buffer -> EditAtom
+changeKeepPositions textEdit cursorEdit context insam buf =
+    inline linewiseChangeCombinator textEdit' cursorEdit' context' buf
+    where
+    shifts = map (* insam) [0, 1 ..]
+    context' = zip shifts context
+    --
+    onFst f (x, y) = (f x, y)
+    cursorEdit' (shift, a) text =
+        let curs = cursorEdit a text
+        in map (onFst (+ shift)) curs
+    --
+    textEdit' (_, a) = textEdit a
+
+-- combinator above specified for cursor context
+changeKeepPositions' :: ((Int, Cursor) -> Text -> [Text])
+                     -> ((Int, Cursor) -> Text -> [(Int, Cursor)])
+                     -> Int
+                     -> Buffer -> EditAtom
+changeKeepPositions' textEdit cursorEdit insam buf =
+    let context = Map.toAscList . bufferCursors $ buf
+    in inline changeKeepPositions textEdit cursorEdit context insam buf
+
+
 -- Get lines; indexed from 1
 getByIndex :: [Int] -> [Text] -> [Text]
 getByIndex = getByIndex' 1 where
@@ -416,21 +406,20 @@ getByIndex = getByIndex' 1 where
         | otherwise  = getByIndex' (current + 1) (ind:inds) lines
 
 
--- Character editing combinator that changes one line with cursor
-mapWithCursor :: (Text -> Text) -> Cursor -> Text -> Text
-mapWithCursor f (Cursor l r) text =
-    let (left, mid, right) = split2 (l, r) text
-    in left `append` f mid `append` right
-
-
 -- Main character editing combinator
 characterwiseChange :: (Text -> Text)
                     -> (Cursor -> Cursor)
                     -> Buffer -> EditAtom
 characterwiseChange charEdit oneCursorEdit buf =
-    let textEdit c t = mapWithCursor charEdit c t
+    let textEdit = mapSelected charEdit
         cursorEdit = oneCursorEdit
-    in linewiseChange textEdit cursorEdit buf
+    in wholeLineChange textEdit cursorEdit buf
+    where
+    -- Character editing combinator that changes one line with cursor
+    mapSelected :: (Text -> Text) -> Cursor -> Text -> Text
+    mapSelected f (Cursor l r) text =
+        let (left, mid, right) = split2 (l, r) text
+        in left `append` f mid `append` right
 
 
 -- get infinite register suitable for any put
