@@ -202,16 +202,7 @@ insertText side text =
     adjust Right (Cursor l r) = Cursor (r + 1) (r + Text.length text)
 
 putText :: HSide -> Buffer -> EditAtom
-putText side buf =
-    inline linewiseChangeCombinator context (insert side) id buf where
-    insert :: HSide -> (Cursor, Text) -> Text -> [Text]
-    insert side (Cursor l r, new) old =
-        let (left, mid, right) = split2 (l, r) old
-        in case side of
-            Left  -> [left `append` new `append` mid `append` right]
-            Right -> [left `append` mid `append` new `append` right]
-    --
-    context = zip (map snd . Map.toAscList . bufferCursors $ buf) (getUnnamedInf buf)
+putText side = putTextFrom side '"'
 
 putTextFrom :: HSide -> Char -> Buffer -> EditAtom
 putTextFrom side name buf =
