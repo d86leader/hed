@@ -206,15 +206,29 @@ putText side = putTextFrom side '"'
 
 putTextFrom :: HSide -> Char -> Buffer -> EditAtom
 putTextFrom side name buf =
-    inline linewiseChangeCombinator context (insert side) id buf where
-    insert :: HSide -> (Cursor, Text) -> Text -> [Text]
-    insert side (Cursor l r, new) old =
+    let (lines, cursors) = unzip . Map.toAscList $ bufferCursors buf
+        context = zip lines (zip cursors (getRegisterInf name buf))
+        body = bufferBody buf
+        --
+        (body', cursors') = inline changeByIndex' (insertReg side) (contextEdit side) context body
+        cursorMap = Map.fromAscList $ zip lines cursors'
+    in return buf{bufferBody = body', bufferCursors = cursorMap}
+    where
+    insertReg :: HSide -> (Cursor, Text) -> Text -> [Text]
+    insertReg side (Cursor l r, new) old =
         let (left, mid, right) = split2 (l, r) old
         in case side of
             Left  -> [left `append` new `append` mid `append` right]
             Right -> [left `append` mid `append` new `append` right]
     --
     context = zip (map snd . Map.toAscList . bufferCursors $ buf) (getRegisterInf name buf)
+    --
+    contextEdit :: HSide -> (Cursor, Text) -> Text -> [Cursor]
+    contextEdit side (Cursor l r, new) old =
+        let size = Text.length new
+        in case side of
+            Left  -> [Cursor l (l + size - 1)]
+            Right -> [Cursor (r + 1) (r + size)]
 
 
 -- yank commands
@@ -288,7 +302,7 @@ safeEditCursors f buf =
     in editCursors (checkCursors size . f) buf
 
 
--- Main line editing combinator; Wraps the one below nicely into editAtom
+-- Main line editing combinator; Wraps changeByIndex nicely into editAtom
 linewiseChangeCombinator :: [a]
                          -> (a -> Text -> [Text])
                          -> (Cursors -> Cursors)
@@ -310,10 +324,17 @@ linewiseChange textEdit cursorEdit buf =
     let cursorLines = map snd . Map.toAscList $ bufferCursors buf
     in inline linewiseChangeCombinator cursorLines textEdit cursorEdit buf
 
+-- linewiseChange' :: (Cursor -> Text -> [Text])
+--                -> Buffer -> EditAtom
+-- linewiseChange' textEdit cursorEdit buf =
+--     let cursorLines = map snd . Map.toAscList $ bufferCursors buf
+--     in inline linewiseChangeCombinator cursorLines textEdit cursorEdit buf
+--     where
+--     contextEdit :: Cursor -> Text -> [Cursor]
+
 
 -- Line editing combinator. It maps each line with some context, and only maps
 -- those lines for which indexed contexts exist.
--- This has grown from simple map with cursors, so variable names are bad
 changeByIndex' :: (a -> Text -> [Text]) -- text editor
               -> (a -> Text -> [b]) -- context editor
               -> [(Int, a)] -- line numbers to edit and context for each line
