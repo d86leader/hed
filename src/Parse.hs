@@ -4,13 +4,17 @@ module Parse
 
 
 import Data.Char (isDigit, digitToInt)
-import Edit.Command -- import all datatypes
+import Edit.Command (VSide(..), CharacterMovement(..), LinewiseMovement(..), Command(..))
 import Data.Text (Text, pack)
+import Data.Char (chr)
+import Control.Monad (join)
 
 import qualified Data.Text as Text
+import qualified Edit.Command as Command
 
-import Prelude hiding (Left, Right)
 
+hleft  = Command.Left
+hright = Command.Right
 
 -- my commands are regular, so a simple pattern matching will do for parsing
 parseString :: String -> [Command]
@@ -75,44 +79,28 @@ parseCommand rep ('l':rest) = (MoveCharacterSelection (Steps rep)) : parseString
 
 
 -- insert new lines
-parseCommand rep ('o':rest) =
-    let (text, rest') = parseInsert rep rest
-    in (InsertLines Bottom text) : parseString rest'
-parseCommand rep ('O':rest) =
-    let (text, rest') = parseInsert rep rest
-    in (InsertLines Top text) : parseString rest'
+parseCommand rep ('o':rest) = insertCombinator (InsertLines Bottom) rep rest
+parseCommand rep ('O':rest) = insertCombinator (InsertLines Top) rep rest
 
 -- delete lines selected
 parseCommand _ ('D':rest) = YankLines : DeleteLines : parseString rest
 
 -- change selected lines
-parseCommand rep ('C':rest) =
-    let (text, rest') = parseInsert rep rest
-    in (ChangeLines text) : parseString rest'
+parseCommand rep ('C':rest) = insertCombinator ChangeLines rep rest
 
 -- append text to line
-parseCommand rep ('I':rest) = 
-    let (text, rest') = parseInsert rep rest
-    in (AppendText Left text) : parseString rest'
-parseCommand rep ('A':rest) = 
-    let (text, rest') = parseInsert rep rest
-    in (AppendText Right text) : parseString rest'
+parseCommand rep ('I':rest) = insertCombinator (AppendText hleft) rep rest
+parseCommand rep ('A':rest) = insertCombinator (AppendText hright) rep rest
 
 -- delete text selected
 parseCommand _ ('d':rest) = YankText : DeleteText : parseString rest
 
 -- insert new text
-parseCommand rep ('i':rest) = 
-    let (text, rest') = parseInsert rep rest
-    in (InsertText Left text) : parseString rest'
-parseCommand rep ('a':rest) = 
-    let (text, rest') = parseInsert rep rest
-    in (InsertText Right text) : parseString rest'
+parseCommand rep ('i':rest) = insertCombinator (InsertText hleft) rep rest
+parseCommand rep ('a':rest) = insertCombinator (InsertText hright) rep rest
 
 -- change selected text
-parseCommand rep ('c':rest) = 
-    let (text, rest') = parseInsert rep rest
-    in (ChangeText text) : parseString rest'
+parseCommand rep ('c':rest) = insertCombinator ChangeText rep rest
 
 
 -- yank selected lines
@@ -123,8 +111,8 @@ parseCommand rep ('y':rest) = YankText : parseString rest
 parseCommand rep ('{':rest) = (PutLines Top)    : parseString rest
 parseCommand rep ('}':rest) = (PutLines Bottom) : parseString rest
 -- put yanked text
-parseCommand rep ('[':rest) = (PutText Left)  : parseString rest
-parseCommand rep (']':rest) = (PutText Right) : parseString rest
+parseCommand rep ('[':rest) = (PutText hleft)  : parseString rest
+parseCommand rep (']':rest) = (PutText hright) : parseString rest
 
 -- select register
 parseCommand _ ('"':name:rest) = (ChangeRegisters name) : parseString rest
@@ -158,12 +146,32 @@ parseLongCommand _ (_:rest) = BadCommand "Multichar commands are wip, please use
 
 
 -- |Some commands require entering a line. This is like vim's insert mode, but they end with <CR>
-parseInsert :: Int -> String -> (Text, String)
+-- Returns text entered and registers used
+parseInsert :: Int -> String -> ([Either Char Text], String)
 parseInsert rep' text =
     let rep = if rep' == 0 then 1 else rep'
         (insert', rest') = break (== '\n') text
-        insert = Text.replicate rep $ pack insert'
+        rawText = Text.replicate rep $ pack insert'
         rest = case rest' of
                 "" -> ""
                 '\n':cs -> cs
-    in (insert, rest)
+        insert:inserts = Text.split (== chr 5) rawText -- split on ^E or C-E
+        regNames = map (Left . Text.head) inserts
+        texts = map (Right . Text.tail) inserts
+        interspersed = join $ zipWith inter regNames texts
+    in ((Right insert) : interspersed, rest)
+    where inter x y = [x, y]
+
+
+-- A function to turn the Either above to text commands
+commandFromEither :: Either Char Text -> Command
+commandFromEither (Left name) = PutTextFrom hleft name
+commandFromEither (Right text) = InsertText hleft text
+
+
+insertCombinator :: (Text -> Command)
+                 -> Int -> String -> [Command]
+insertCombinator onHead rep str =
+    let ((Right first):texts, rest) = parseInsert rep str
+        actions = map commandFromEither $ texts
+    in (onHead first) : actions ++ parseString rest

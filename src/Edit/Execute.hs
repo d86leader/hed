@@ -52,6 +52,7 @@ runOneCommand YankLines = yankLines
 runOneCommand YankText  = yankText
 runOneCommand (PutLines side) = putLines side
 runOneCommand (PutText side)  = putText side
+runOneCommand (PutTextFrom side name) = putTextFrom side name
 
 runOneCommand (ChangeRegisters name) = changeRegisters name
 
@@ -211,6 +212,18 @@ putText side buf =
             Right -> [left `append` mid `append` new `append` right]
     --
     context = zip (map snd . Map.toAscList . bufferCursors $ buf) (getUnnamedInf buf)
+
+putTextFrom :: HSide -> Char -> Buffer -> EditAtom
+putTextFrom side name buf =
+    inline linewiseChangeCombinator context (insert side) id buf where
+    insert :: HSide -> (Cursor, Text) -> Text -> [Text]
+    insert side (Cursor l r, new) old =
+        let (left, mid, right) = split2 (l, r) old
+        in case side of
+            Left  -> [left `append` new `append` mid `append` right]
+            Right -> [left `append` mid `append` new `append` right]
+    --
+    context = zip (map snd . Map.toAscList . bufferCursors $ buf) (getRegisterInf name buf)
 
 
 -- yank commands

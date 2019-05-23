@@ -50,6 +50,7 @@ data Command where
     ChangeText :: Text -> Command
     YankText   :: Command
     PutText    :: HSide -> Command
+    PutTextFrom :: HSide -> Char -> Command
     InsertText :: HSide -> Text -> Command
     AppendPutText :: HSide -> Command
     --
