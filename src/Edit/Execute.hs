@@ -18,7 +18,7 @@ import Edit.Command (Command(..), LinewiseMovement(..), CharacterMovement(..)
 import Edit.Effects (Buffer(..), Effects(..), Cursor (..)
                     ,EditAtom, EffectAtom, Cursor, Cursors
                     ,newCursor, newAllCursors
-                    ,editBody, editFileName, editCursors, editSize
+                    ,editFileName, editCursors
                     ,setRegister ,getRegister, editRegister
                     ,writer, tell)
 import Util.Text (split2)
@@ -183,7 +183,7 @@ putLines side buf =
     shift Top    (_, line) _ = [(line, Cursor 0 maxBound)]
     shift Bottom (_, line) _ = [(line + 1, Cursor 0 maxBound)]
     --
-    context = zip (getUnnamedInf buf) (map fst . Map.toAscList . bufferCursors $ buf)
+    context = zip (getUnnamedInf buf) (map fst . getCursors $ buf)
 
 
 -- character (inside-line) editing commands
@@ -213,7 +213,7 @@ putText side = putTextFrom side '"'
 
 putTextFrom :: HSide -> Char -> Buffer -> EditAtom
 putTextFrom side name buf =
-    let (lines, cursors) = unzip . Map.toAscList $ bufferCursors buf
+    let (lines, cursors) = unzip . getCursors $ buf
         context = zip lines (zip cursors (getRegisterInf name buf))
         body = bufferBody buf
         --
@@ -228,7 +228,7 @@ putTextFrom side name buf =
             Left  -> [left `append` new `append` mid `append` right]
             Right -> [left `append` mid `append` new `append` right]
     --
-    context = zip (map snd . Map.toAscList . bufferCursors $ buf) (getRegisterInf name buf)
+    context = zip (map snd . getCursors $ buf) (getRegisterInf name buf)
     --
     contextEdit :: HSide -> (Cursor, Text) -> Text -> [Cursor]
     contextEdit side (Cursor l r, new) old =
@@ -242,13 +242,13 @@ putTextFrom side name buf =
 
 yankLines :: Buffer -> EditAtom
 yankLines buf =
-    let inds = map fst . Map.toAscList . bufferCursors $ buf
+    let inds = map fst . getCursors $ buf
         lines = getByIndex inds . bufferBody $ buf
     in return . setUnnamed lines $ buf
 
 yankText :: Buffer -> EditAtom
 yankText buf =
-    let curs = Map.toAscList . bufferCursors $ buf
+    let curs = getCursors buf
         inds = map fst curs
         poss = map (\(Cursor l r) -> (l, r)) . map snd $ curs
         lines = getByIndex inds . bufferBody $ buf
@@ -348,11 +348,11 @@ linewiseChangeCombinator :: (a -> Text -> [Text]) -- text editor
                          -> [a] -- context
                          -> Buffer -> EditAtom
 linewiseChangeCombinator textEdit contextEdit context buf =
-    let inds = map fst . Map.toAscList . bufferCursors $ buf
+    let inds = map fst . getCursors $ buf
         fullContext = zip inds context
         (newBody, newCurs) = changeByIndex textEdit contextEdit fullContext $ bufferBody buf
         size    = length newBody
-        newCurs' = checkCursors size . Map.fromAscList $ newCurs
+        newCurs' = prepareCursors size newCurs
     in return buf{bufferBody = newBody, bufferCursors = newCurs', bufferSize = size}
 
 
@@ -363,7 +363,7 @@ wholeLineChange :: (Cursor -> Text -> Text)
 wholeLineChange textEdit cursorEdit buf =
     let textEdit' (_, c) t = [textEdit c t]
         cursorEdit' (line, cur) _ = [(line, cursorEdit cur)]
-        context = Map.toAscList . bufferCursors $ buf
+        context = getCursors buf
     in linewiseChangeCombinator textEdit' cursorEdit' context buf
 
 
@@ -391,7 +391,7 @@ changeKeepPositions' :: ((Int, Cursor) -> Text -> [Text])
                      -> Int
                      -> Buffer -> EditAtom
 changeKeepPositions' textEdit cursorEdit insam buf =
-    let context = Map.toAscList . bufferCursors $ buf
+    let context = getCursors buf
     in inline changeKeepPositions textEdit cursorEdit context insam buf
 
 
@@ -406,7 +406,7 @@ getByIndex = getByIndex' 1 where
         | otherwise  = getByIndex' (current + 1) (ind:inds) lines
 
 
--- Main character editing combinator
+-- Main character editing combinator. Change only selected text in each line
 characterwiseChange :: (Text -> Text)
                     -> (Cursor -> Cursor)
                     -> Buffer -> EditAtom
@@ -432,3 +432,7 @@ getUnnamed = getRegister '"'
 setUnnamed = setRegister '"'
 editUnnamed = editRegister '"'
 getUnnamedInf = getRegisterInf '"'
+
+-- operations on buffer cursors
+getCursors = Map.toAscList . bufferCursors
+prepareCursors size = checkCursors size . Map.fromAscList
