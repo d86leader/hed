@@ -191,13 +191,14 @@ changeText text = characterwiseChange (const text) adjust
 
 insertText :: HSide -> Text -> Buffer -> EditAtom
 insertText side text =
-    characterwiseChange (insert side text) adjust
+    characterwiseChange (insert side text) (adjust side)
     where
     insert :: HSide -> Text -> Text -> Text
     insert Left  new old = new `append` old
     insert Right new old = old `append` new
     --
-    adjust (Cursor l r) = Cursor l (r + Text.length text - 1)
+    adjust Left  (Cursor l r) = Cursor l (l + Text.length text - 1)
+    adjust Right (Cursor l r) = Cursor (r + 1) (r + Text.length text)
 
 putText :: HSide -> Buffer -> EditAtom
 putText side buf =
