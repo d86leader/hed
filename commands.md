@@ -97,9 +97,9 @@ Enter the symbols you want to insert and press RET to exit it.
 
 `"X` - поменять содержимое безымянного регистра и региста X. Вместо X можно ввести любой символ с клавиатуры.
 
-`y` - copy selected symbols
+`y` - yank (copy) selected symbols
 
-`Y` - copy selected lines whole
+`Y` - yank (copy) selected lines whole
 
 `[` - paste symbols before selection
 
